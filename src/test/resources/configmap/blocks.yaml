@@ -1,0 +1,14 @@
+apiVersion: "v1"
+kind: "ConfigMap"
+metadata:
+  labels:
+    mykey: "hello"
+    app.kubernetes.io/managed-by: "duplicate-detector-operator"
+    app.kubernetes.io/part-of: "test"
+  name: "test"
+  namespace: "test"
+data:
+  duplicate_detector.properties: |
+    duplicate_detector.onExitInvoke=pkill fluent-bit
+    duplicate_detector.parentWorkingDir=/usr/sumo/system-tools/duplicate-detector-state
+    duplicate_detector.targetObject=blocks

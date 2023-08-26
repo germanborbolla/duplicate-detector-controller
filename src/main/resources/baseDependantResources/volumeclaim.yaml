@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: "gp2"
+  resources:
+    requests:
+      storage:
+  volumeMode: Filesystem

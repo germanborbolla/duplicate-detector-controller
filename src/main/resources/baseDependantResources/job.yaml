@@ -1,0 +1,48 @@
+apiVersion: batch/v1
+kind: Job
+spec:
+  template:
+    metadata:
+      labels:
+        tailing-sidecar: "true"
+    spec:
+      containers:
+        - imagePullPolicy: Always
+          name: duplicate-detector
+          env:
+            - name: JAVA_OPTIONS
+              value: |
+                -Xmx8192m -XX:+UseG1GC -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager -Dspring.profiles.active=prod
+                -Xlog:gc*=info:file=/usr/sumo/system-tools/logs/duplicate_detector.gc.log:t:filecount=10,filesize=10M
+                -XX:+HeapDumpOnOutOfMemoryError
+          args:
+            - com.sumologic.system.tools.block.duplicate_detector.DuplicateMessageScanner
+          resources:
+            limits:
+              cpu: "8"
+              memory: 10Gi
+              vpc.amazonaws.com/pod-eni: "1"
+            requests:
+              cpu: "1"
+              memory: 8Gi
+              vpc.amazonaws.com/pod-eni: "1"
+          volumeMounts:
+            - mountPath: /usr/sumo/system-tools/logs
+              name: logs-dir
+            - mountPath: /usr/sumo/system-tools/config
+              name: config
+              readOnly: true
+            - mountPath: /usr/sumo/system-tools/duplicate-detector-state
+              name: duplicate-detector-pvc
+      serviceAccountName: duplicate-detector
+      volumes:
+        - emptyDir: {}
+          name: logs-dir
+      restartPolicy: OnFailure
+      securityContext:
+        fsGroup: 1000
+        runAsGroup: 1000
+        runAsUser: 1000
+      shareProcessNamespace: true
+  backoffLimit: 1
+  ttlSecondsAfterFinished: 120

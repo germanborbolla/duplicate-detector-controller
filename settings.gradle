@@ -1,0 +1,40 @@
+pluginManagement {
+    gradle.ext.isCiServer = System.getenv().containsKey("CI")
+    gradle.ext.gradleEnterpriseUrl = System.getenv("GRADLE_ENTERPRISE_URL") ?: "https://gradle.kumoroku.com"
+
+    gradle.ext.artifactoryUrl = { repo -> repo ? "${artifactory_contextUrl}/${repo}" : artifactory_contextUrl }
+    gradle.ext.artifactoryCredentials = {
+        name = 'X-JFrog-Art-Api'
+        value = artifactory_password
+    }
+
+    repositories {
+        gradlePluginPortal {
+            url gradle.artifactoryUrl('repo')
+            credentials(HttpHeaderCredentials, gradle.artifactoryCredentials)
+            authentication { header(HttpHeaderAuthentication) }
+        }
+    }
+}
+
+plugins {
+    id "com.gradle.enterprise" version "3.14.1"
+}
+
+gradleEnterprise {
+    server = gradle.gradleEnterpriseUrl
+}
+
+if (!System.getenv("GRADLE_ENTERPRISE_ACCESS_KEY") && !(new File("${gradle.gradleUserHomeDir}/enterprise/keys.properties").exists())) {
+    logger.warn("YOU DON'T HAVE ACCESS TO GRADLE ENTERPRISE!!!")
+    logger.warn("Follow instructions: https://github.com/Sanyaku/onboarding/blob/master/doc/gradle_enterprise.md")
+}
+
+buildCache {
+    local { enabled = true }
+
+    remote(gradleEnterprise.buildCache) {
+        push = gradle.isCiServer
+    }
+}
+

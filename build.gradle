@@ -1,0 +1,74 @@
+plugins {
+    id 'java'
+    id 'com.bmuschko.docker-java-application' version '9.3.2'
+}
+
+version="0.0.1"
+
+docker {
+    javaApplication {
+        maintainer = 'Panda "panda@sumologic.com"'
+        mainClassName = 'com.sumologic.duplicate.detector.controller.Controller'
+        ports = []
+        jvmArgs = ['-Xms256m', '-Xmx1g']
+    }
+}
+
+repositories {
+    ivy {
+        name = 'artifact'
+        url gradle.artifactoryUrl()
+        patternLayout {
+            artifact "repo/[organisation]/[module]/[revision]/[artifact]-[revision](-[classifier])(.[ext])"
+            artifact "github/[organisation]/releases/download/v[revision]/[artifact]-[revision](-[classifier])(.[ext])"
+            m2compatible = true
+        }
+        credentials(HttpHeaderCredentials, gradle.artifactoryCredentials)
+        authentication { header(HttpHeaderAuthentication) }
+        metadataSources { artifact() }
+        content {
+            onlyForConfigurations('jFrogConfiguration')
+        }
+    }
+    maven {
+        name = 'maven'
+        url gradle.artifactoryUrl('repo')
+        credentials(HttpHeaderCredentials, gradle.artifactoryCredentials)
+        authentication { header(HttpHeaderAuthentication) }
+        metadataSources {
+            mavenPom()
+            artifact()
+        }
+        content {
+            notForConfigurations('jFrogConfiguration')
+        }
+    }
+}
+
+dependencies {
+    implementation "io.javaoperatorsdk:operator-framework:${javaOperatorVersion}"
+    implementation "io.fabric8:kubernetes-client:${fabric8Version}"
+    implementation "io.fabric8:crd-generator-apt:${fabric8Version}"
+    implementation 'com.google.guava:guava:32.1.1-jre'
+
+    annotationProcessor "io.javaoperatorsdk:operator-framework:${javaOperatorVersion}"
+    annotationProcessor "io.fabric8:crd-generator-apt:${fabric8Version}"
+
+    implementation "io.javaoperatorsdk:operator-framework-junit-5:${javaOperatorVersion}"
+    testImplementation(platform('org.junit:junit-bom:5.10.0'))
+    testImplementation('org.junit.jupiter:junit-jupiter')
+}
+
+test {
+    useJUnitPlatform()
+    testLogging {
+        events "passed", "skipped", "failed"
+    }
+}
+
+// Apply a specific Java toolchain to ease working on different environments.
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(11)
+    }
+}
