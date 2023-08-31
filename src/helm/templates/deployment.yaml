@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Chart.Name }}
+  labels:
+    {{- include "duplicate-detector-controlller.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      app: {{ .Chart.Name }}
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        {{- include "duplicate-detector-controlller.labels" . | nindent 8 }}
+        app: {{ .Chart.Name }}
+    spec:
+      serviceAccountName: {{ .Chart.Name }}
+      containers:
+        - name: operator
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: SYSTEM_TOOLS_IMAGE
+              value: "{{ .Values.systemToolsImage.repository }}:{{ .Values.systemToolsImage.version }}"
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+

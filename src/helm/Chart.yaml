@@ -1,0 +1,9 @@
+apiVersion: v2
+name: duplicate-detector-controller
+description: Controller to run scans for duplicate messages
+
+type: application
+
+version: 0.0.1
+
+appVersion: "0.0.1"

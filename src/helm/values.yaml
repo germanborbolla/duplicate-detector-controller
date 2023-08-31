@@ -1,0 +1,22 @@
+image:
+  repository:
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: ""
+
+systemToolsImage:
+  repository: 246946804217.dkr.ecr.us-west-2.amazonaws.com/sumologic/system-tools
+  version:
+
+serviceAccount:
+  # Annotations to add to the service account
+  annotations: {}
+
+resources:
+  limits:
+    cpu: 2
+    memory: 1Gi
+  requests:
+    cpu: 100m
+    memory: 256Mi
+
