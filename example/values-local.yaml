@@ -1,0 +1,10 @@
+image:
+  repository: duplicate-detector-controller
+
+systemToolsImage:
+  repository: system-tools
+  version: 20.1-SNAPSHOT
+
+persistentVolumeClaim:
+  storageClassName: "standard"
+  defaultSize: "100Mi"
