@@ -10,6 +10,9 @@ public class SingleDuplicateMessageScanStatus {
     private boolean completed;
     private String error;
 
+    public SingleDuplicateMessageScanStatus() {
+    }
+
     public SingleDuplicateMessageScanStatus(JobStatus jobStatus) {
         if (jobStatus.getSucceeded() > 0 || jobStatus.getFailed() > 0) {
             completed = true;

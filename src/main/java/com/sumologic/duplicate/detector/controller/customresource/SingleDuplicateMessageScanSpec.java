@@ -56,24 +56,22 @@ public class SingleDuplicateMessageScanSpec {
 
     @JsonPropertyDescription("[Optional] Size of the volume to attach to the scanning jobs, defaults to '300g'")
     @Nullable
-    public Optional<String> getVolumeSize() {
-        return Optional.ofNullable(volumeSize);
+    public String getVolumeSize() {
+        return volumeSize;
     }
 
-    public SingleDuplicateMessageScanSpec setVolumeSize(String volumeSize) {
+    public void setVolumeSize(String volumeSize) {
         this.volumeSize = volumeSize;
-        return this;
     }
 
     @JsonPropertyDescription("[Optional] What to scan either blocks or indices, defaults to 'indices'")
     @Nullable
-    public Optional<String> getTargetObject() {
-        return Optional.ofNullable(targetObject);
+    public String getTargetObject() {
+        return targetObject;
     }
 
-    public SingleDuplicateMessageScanSpec setTargetObject(String targetObject) {
+    public void setTargetObject(String targetObject) {
         this.targetObject = targetObject;
-        return this;
     }
 
     @Override

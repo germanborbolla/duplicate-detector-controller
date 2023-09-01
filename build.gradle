@@ -7,6 +7,7 @@ version="0.0.1"
 
 docker {
     javaApplication {
+        baseImage = 'amazoncorretto:11-alpine-jdk'
         maintainer = 'Panda "panda@sumologic.com"'
         mainClassName = 'com.sumologic.duplicate.detector.controller.Controller'
         ports = []
@@ -50,6 +51,8 @@ dependencies {
     implementation "io.fabric8:kubernetes-client:${fabric8Version}"
     implementation "io.fabric8:crd-generator-apt:${fabric8Version}"
     implementation 'com.google.guava:guava:32.1.1-jre'
+    implementation "org.apache.logging.log4j:log4j-slf4j2-impl:${orgApacheLoggingLog4jVersion}"
+    implementation "org.apache.logging.log4j:log4j-core:${orgApacheLoggingLog4jVersion}"
 
     annotationProcessor "io.javaoperatorsdk:operator-framework:${javaOperatorVersion}"
     annotationProcessor "io.fabric8:crd-generator-apt:${fabric8Version}"

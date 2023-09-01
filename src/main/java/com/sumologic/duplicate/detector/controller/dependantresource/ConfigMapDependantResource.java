@@ -28,7 +28,11 @@ public class ConfigMapDependantResource extends CRUDKubernetesDependentResource<
         // TODO(panda, 8/29/23): how to pass more properties
         // TODO(panda, 8/29/23): how to pass a log4j
         Map<String, String> properties = new HashMap<>(DEFAULT_PROPERTIES);
-        properties.put(TARGET_OBJECT_KEY, scan.getSpec().getTargetObject().orElse("indices"));
+        String targetObject = "indices";
+        if (scan.getSpec().getTargetObject() != null) {
+            targetObject = scan.getSpec().getTargetObject();
+        }
+        properties.put(TARGET_OBJECT_KEY, targetObject);
         return new ConfigMapBuilder()
           .withMetadata(Utils.buildMetadata(scan))
           .addToData("duplicate_detector.properties", mapToString(properties))

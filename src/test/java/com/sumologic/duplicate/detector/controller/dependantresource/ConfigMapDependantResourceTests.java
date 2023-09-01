@@ -23,7 +23,9 @@ public class ConfigMapDependantResourceTests extends BaseTests {
   @Test
   void configMapWithDesiredTargetObject() {
     ConfigMapDependantResource sut = new ConfigMapDependantResource();
-    SingleDuplicateMessageScan scan = createScan(new SingleDuplicateMessageScanSpec().setTargetObject("blocks"));
+    SingleDuplicateMessageScanSpec spec = new SingleDuplicateMessageScanSpec();
+    spec.setTargetObject("blocks");
+    SingleDuplicateMessageScan scan = createScan(spec);
     assertEqualsWithYaml(loadYaml(ConfigMap.class, getClass(), "/configmap/blocks.yaml"),
       sut.desired(scan, null));
   }
