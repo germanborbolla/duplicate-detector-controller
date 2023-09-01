@@ -12,6 +12,10 @@ serviceAccount:
   # Annotations to add to the service account
   annotations: {}
 
+persistentVolumeClaim:
+  storageClassName: "gp2"
+  defaultSize: "300Gi"
+
 resources:
   limits:
     cpu: 2

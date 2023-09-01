@@ -23,6 +23,10 @@ spec:
           env:
             - name: SYSTEM_TOOLS_IMAGE
               value: "{{ .Values.systemToolsImage.repository }}:{{ .Values.systemToolsImage.version }}"
+            - name: PVC_STORAGE_CLASS_NAME
+              value: {{ .Values.persistentVolumeClaim.storageClassName }}
+            - name: PVC_DEFAULT_SIZE
+              value: {{ .Values.persistentVolumeClaim.defaultSize }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
 

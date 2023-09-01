@@ -9,10 +9,16 @@ import io.javaoperatorsdk.operator.api.reconciler.Context;
 import io.javaoperatorsdk.operator.processing.dependent.kubernetes.CRUDKubernetesDependentResource;
 import io.javaoperatorsdk.operator.processing.dependent.kubernetes.KubernetesDependent;
 
+import java.util.Optional;
+
 import static io.javaoperatorsdk.operator.ReconcilerUtils.loadYaml;
 
 @KubernetesDependent(labelSelector = Utils.RESOURCE_LABEL_SELECTOR)
 public class PersistentVolumeClaimDependantResource extends CRUDKubernetesDependentResource<PersistentVolumeClaim, SingleDuplicateMessageScan> {
+    private static final String STORAGE_CLASS_NAME = Optional.ofNullable(System.getenv("PVC_STORAGE_CLASS_NAME"))
+      .orElse("gp2");
+    private static final String DEFAULT_SIZE = Optional.ofNullable(System.getenv("PVC_DEFAULT_SIZE")).
+      orElse("300Gi");
     public PersistentVolumeClaimDependantResource() {
         super(PersistentVolumeClaim.class);
     }
@@ -21,11 +27,16 @@ public class PersistentVolumeClaimDependantResource extends CRUDKubernetesDepend
     protected PersistentVolumeClaim desired(SingleDuplicateMessageScan scan, Context<SingleDuplicateMessageScan> context) {
         PersistentVolumeClaim base = loadYaml(PersistentVolumeClaim.class, getClass(),
           "/baseDependantResources/volumeclaim.yaml");
+        String size = DEFAULT_SIZE;
+        if (scan.getSpec().getVolumeSize() != null) {
+            size = scan.getSpec().getVolumeSize();
+        }
         return new PersistentVolumeClaimBuilder(base)
           .withMetadata(Utils.buildMetadata(scan))
-          .editSpec().editResources()
-          .addToRequests("storage", Quantity.parse(scan.getSpec().getVolumeSize().orElse("300Gi")))
-          .endResources().endSpec()
+          .editSpec()
+          .withStorageClassName(STORAGE_CLASS_NAME)
+          .editResources().addToRequests("storage", Quantity.parse(size)).endResources()
+          .endSpec()
           .build();
     }
 }
