@@ -6,43 +6,21 @@ import io.fabric8.kubernetes.api.model.batch.v1.JobStatus;
 import java.util.Objects;
 
 public class SingleDuplicateMessageScanStatus {
-    private boolean successful;
-    private boolean completed;
+
+    private JobStatus jobStatus;
     private String error;
 
     public SingleDuplicateMessageScanStatus() {
     }
 
     public SingleDuplicateMessageScanStatus(JobStatus jobStatus) {
-        if (jobStatus.getSucceeded() > 0 || jobStatus.getFailed() > 0) {
-            completed = true;
-            successful = jobStatus.getSucceeded() > 0;
-        } else {
-            completed = false;
-            successful = false;
-        }
+        this.jobStatus = jobStatus;
+        this.error = null;
     }
 
     public SingleDuplicateMessageScanStatus(Exception e) {
-        this.completed = false;
-        this.successful = false;
+        this.jobStatus = null;
         this.error = e.getMessage();
-    }
-
-    public boolean isSuccessful() {
-        return successful;
-    }
-
-    public void setSuccessful(boolean successful) {
-        this.successful = successful;
-    }
-
-    public boolean isCompleted() {
-        return completed;
-    }
-
-    public void setCompleted(boolean completed) {
-        this.completed = completed;
     }
 
     public String getError() {
@@ -53,24 +31,31 @@ public class SingleDuplicateMessageScanStatus {
         this.error = error;
     }
 
+    public JobStatus getJobStatus() {
+        return jobStatus;
+    }
+
+    public void setJobStatus(JobStatus jobStatus) {
+        this.jobStatus = jobStatus;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         SingleDuplicateMessageScanStatus that = (SingleDuplicateMessageScanStatus) o;
-        return successful == that.successful && completed == that.completed && Objects.equals(error, that.error);
+        return Objects.equals(jobStatus, that.jobStatus) && Objects.equals(error, that.error);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(successful, completed, error);
+        return Objects.hash(jobStatus, error);
     }
 
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-          .add("successful", successful)
-          .add("completed", completed)
+          .add("jobStatus", jobStatus)
           .add("error", error)
           .toString();
     }
