@@ -9,6 +9,7 @@ spec:
     matchLabels:
       app: {{ .Chart.Name }}
   replicas: 1
+  revisionHistoryLimit: 1
   template:
     metadata:
       labels:
@@ -27,6 +28,25 @@ spec:
               value: {{ .Values.persistentVolumeClaim.storageClassName }}
             - name: PVC_DEFAULT_SIZE
               value: {{ .Values.persistentVolumeClaim.defaultSize }}
+            - name: CHECK_CRD_ENV_KEY
+              value: "false"
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
-
+      tolerations:
+        - effect: NoSchedule
+          key: cpuBrand
+          operator: Equal
+          value: graviton2
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: kubernetes.io/os
+                operator: In
+                values:
+                - linux
+              - key: kubernetes.io/arch
+                operator: In
+                values:
+                - arm64
