@@ -19,11 +19,11 @@ spec:
         properties:
           spec:
             properties:
+              customer:
+                type: string
               startTime:
                 type: string
               endTime:
-                type: string
-              customer:
                 type: string
               volumeSize:
                 nullable: true
@@ -32,9 +32,9 @@ spec:
                 nullable: true
                 type: string
             required:
+            - customer
             - startTime
             - endTime
-            - customer
             type: object
           status:
             properties:

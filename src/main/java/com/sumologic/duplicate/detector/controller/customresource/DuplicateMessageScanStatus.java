@@ -5,20 +5,20 @@ import io.fabric8.kubernetes.api.model.batch.v1.JobStatus;
 
 import java.util.Objects;
 
-public class SingleDuplicateMessageScanStatus {
+public class DuplicateMessageScanStatus {
 
     private JobStatus jobStatus;
     private String error;
 
-    public SingleDuplicateMessageScanStatus() {
+    public DuplicateMessageScanStatus() {
     }
 
-    public SingleDuplicateMessageScanStatus(JobStatus jobStatus) {
+    public DuplicateMessageScanStatus(JobStatus jobStatus) {
         this.jobStatus = jobStatus;
         this.error = null;
     }
 
-    public SingleDuplicateMessageScanStatus(Exception e) {
+    public DuplicateMessageScanStatus(Exception e) {
         this.jobStatus = null;
         this.error = e.getMessage();
     }
@@ -43,7 +43,7 @@ public class SingleDuplicateMessageScanStatus {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        SingleDuplicateMessageScanStatus that = (SingleDuplicateMessageScanStatus) o;
+        DuplicateMessageScanStatus that = (DuplicateMessageScanStatus) o;
         return Objects.equals(jobStatus, that.jobStatus) && Objects.equals(error, that.error);
     }
 

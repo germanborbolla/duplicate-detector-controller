@@ -1,6 +1,6 @@
 package com.sumologic.duplicate.detector.controller.dependantresource;
 
-import com.sumologic.duplicate.detector.controller.Utils;
+import com.sumologic.duplicate.detector.controller.Constants;
 import com.sumologic.duplicate.detector.controller.customresource.SingleDuplicateMessageScan;
 import io.fabric8.kubernetes.api.model.ConfigMap;
 import io.fabric8.kubernetes.api.model.ConfigMapBuilder;
@@ -12,7 +12,7 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.*;
 
-@KubernetesDependent(labelSelector = Utils.RESOURCE_LABEL_SELECTOR)
+@KubernetesDependent(labelSelector = Constants.RESOURCE_LABEL_SELECTOR)
 public class ConfigMapDependantResource extends CRUDKubernetesDependentResource<ConfigMap, SingleDuplicateMessageScan> {
 
     private static final String TARGET_OBJECT_KEY = "duplicate_detector.targetObject";
@@ -34,7 +34,7 @@ public class ConfigMapDependantResource extends CRUDKubernetesDependentResource<
         }
         properties.put(TARGET_OBJECT_KEY, targetObject);
         return new ConfigMapBuilder()
-          .withMetadata(Utils.buildMetadata(scan))
+          .withMetadata(scan.buildDependentObjectMetadata())
           .addToData("duplicate_detector.properties", mapToString(properties))
           .build();
     }

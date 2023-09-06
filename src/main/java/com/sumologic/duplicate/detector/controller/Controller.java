@@ -9,7 +9,7 @@ public class Controller {
     public static void main(String[] args) {
         Configurator.initialize("config", null, "classpath:log4j2.xml");
         Operator operator = new Operator();
-        operator.register(new DuplicateMessageScanReconciler());
+        operator.register(new SingleDuplicateMessageScanReconciler());
         // TODO(panda, 8/29/23): get duration from environment
         operator.installShutdownHook(Duration.ofMinutes(2));
         operator.start();

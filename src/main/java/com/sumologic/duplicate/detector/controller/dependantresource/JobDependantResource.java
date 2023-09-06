@@ -1,6 +1,6 @@
 package com.sumologic.duplicate.detector.controller.dependantresource;
 
-import com.sumologic.duplicate.detector.controller.Utils;
+import com.sumologic.duplicate.detector.controller.Constants;
 import com.sumologic.duplicate.detector.controller.customresource.SingleDuplicateMessageScan;
 import io.fabric8.kubernetes.api.model.PodSpecBuilder;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
@@ -13,12 +13,12 @@ import java.util.Objects;
 
 import static io.javaoperatorsdk.operator.ReconcilerUtils.loadYaml;
 
-@KubernetesDependent(labelSelector = Utils.RESOURCE_LABEL_SELECTOR)
+@KubernetesDependent(labelSelector = Constants.RESOURCE_LABEL_SELECTOR)
 public class JobDependantResource extends CRUDKubernetesDependentResource<Job, SingleDuplicateMessageScan> {
 
     private String systemToolsImage = "";
     public JobDependantResource() {
-        this(Objects.requireNonNull(System.getenv(Utils.SYSTEM_TOOLS_IMAGE_ENV_NAME)));
+        this(Objects.requireNonNull(System.getenv(Constants.SYSTEM_TOOLS_IMAGE_ENV_NAME)));
     }
 
     public JobDependantResource(String systemToolsImage) {
@@ -33,7 +33,7 @@ public class JobDependantResource extends CRUDKubernetesDependentResource<Job, S
         configureContainer(scan, podSpecBuilder);
         configureVolumes(scan, podSpecBuilder);
         return new JobBuilder(base)
-          .withMetadata(Utils.buildMetadata(scan))
+          .withMetadata(scan.buildDependentObjectMetadata())
           .editSpec().editTemplate()
           .withSpec(podSpecBuilder.build())
           .endTemplate().endSpec().build();
