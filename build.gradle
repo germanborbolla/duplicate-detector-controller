@@ -94,3 +94,19 @@ tasks.register("docker", Exec) {
             "docker"
     ])
 }
+
+tasks.register("package-helm-chart", Exec) {
+    String helmVersion = project.version
+    if (project.hasProperty("helmVersion")) {
+        helmVersion = project.property("helmVersion")
+    }
+    workingDir = layout.projectDirectory
+    executable = "helm"
+    args([
+            "package",
+            layout.projectDirectory.dir("src/helm"),
+            "--app-version=${project.version}",
+            "--version=${helmVersion}",
+            "--destination=${layout.projectDirectory.dir("packages")}"
+    ])
+}
