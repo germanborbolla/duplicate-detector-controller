@@ -12,6 +12,8 @@ spec:
     metadata:
       labels:
         tailing-sidecar: "true"
+        team: distributed-systems
+        assembly: duplicate-detector
     spec:
       containers:
         - image: system-tools:123

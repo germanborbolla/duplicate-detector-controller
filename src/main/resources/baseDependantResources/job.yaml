@@ -5,6 +5,8 @@ spec:
     metadata:
       labels:
         tailing-sidecar: "true"
+        team: distributed-systems
+        assembly: duplicate-detector
     spec:
       containers:
         - imagePullPolicy: Always
