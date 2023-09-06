@@ -1,5 +1,5 @@
 image:
-  repository:
+  repository: 246946804217.dkr.ecr.us-west-2.amazonaws.com/sumologic/duplicate-detector-controller
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
   tag: ""
