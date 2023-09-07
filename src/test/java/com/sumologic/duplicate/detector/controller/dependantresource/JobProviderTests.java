@@ -8,14 +8,14 @@ import org.junit.jupiter.api.Test;
 
 import static io.javaoperatorsdk.operator.ReconcilerUtils.loadYaml;
 
-public class JobDependantResourceTests extends BaseTests {
+public class JobProviderTests extends BaseTests {
 
   @DisplayName("Creates a job with the arguments from the spec")
   @Test
   void testCreateBasicJob() {
     SingleDuplicateMessageScan scan = createScan(new SingleDuplicateMessageScanSpec("startTime", "endTime",
       "0000000000000005"));
-    JobDependantResource sut = new JobDependantResource("system-tools:123");
+    JobProvider sut = new JobProvider("system-tools:123");
     assertEqualsWithYaml(loadYaml(Job.class, getClass(), "/job/basic.yaml"), sut.desired(scan, null));
 
   }

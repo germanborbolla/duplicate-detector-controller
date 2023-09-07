@@ -8,12 +8,12 @@ import org.junit.jupiter.api.Test;
 
 import static io.javaoperatorsdk.operator.ReconcilerUtils.loadYaml;
 
-public class ConfigMapDependantResourceTests extends BaseTests {
+public class ConfigMapProviderTests extends BaseTests {
 
   @DisplayName("Generates expected config map that scans indices")
   @Test
   void generateBasicConfigMap() {
-    ConfigMapDependantResource sut = new ConfigMapDependantResource();
+    ConfigMapProvider sut = new ConfigMapProvider();
     SingleDuplicateMessageScan scan = createScan();
     assertEqualsWithYaml(loadYaml(ConfigMap.class, getClass(), "/configmap/basic.yaml"),
       sut.desired(scan, null));
@@ -22,7 +22,7 @@ public class ConfigMapDependantResourceTests extends BaseTests {
   @DisplayName("Generated a config map that scans the target object")
   @Test
   void configMapWithDesiredTargetObject() {
-    ConfigMapDependantResource sut = new ConfigMapDependantResource();
+    ConfigMapProvider sut = new ConfigMapProvider();
     SingleDuplicateMessageScanSpec spec = new SingleDuplicateMessageScanSpec();
     spec.setTargetObject("blocks");
     SingleDuplicateMessageScan scan = createScan(spec);

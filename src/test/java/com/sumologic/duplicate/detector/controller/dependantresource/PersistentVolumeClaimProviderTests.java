@@ -8,13 +8,13 @@ import org.junit.jupiter.api.Test;
 
 import static io.javaoperatorsdk.operator.ReconcilerUtils.loadYaml;
 
-public class PersistentVolumeClaimDependantResourceTests extends BaseTests {
+public class PersistentVolumeClaimProviderTests extends BaseTests {
 
   @DisplayName("Creates a PVC with the default size")
   @Test
   void testCreateAVolumeWithDefaultSize() {
     SingleDuplicateMessageScan scan = createScan();
-    PersistentVolumeClaimDependantResource sut = new PersistentVolumeClaimDependantResource();
+    PersistentVolumeClaimProvider sut = new PersistentVolumeClaimProvider();
     assertEqualsWithYaml(loadYaml(PersistentVolumeClaim.class, getClass(), "/pvc/basic.yaml"),
       sut.desired(scan, null));
   }
@@ -25,7 +25,7 @@ public class PersistentVolumeClaimDependantResourceTests extends BaseTests {
     SingleDuplicateMessageScanSpec spec = new SingleDuplicateMessageScanSpec();
     spec.setVolumeSize("100Gi");
     SingleDuplicateMessageScan scan = createScan(spec);
-    PersistentVolumeClaimDependantResource sut = new PersistentVolumeClaimDependantResource();
+    PersistentVolumeClaimProvider sut = new PersistentVolumeClaimProvider();
     assertEqualsWithYaml(loadYaml(PersistentVolumeClaim.class, getClass(), "/pvc/custom-size.yaml"),
       sut.desired(scan, null));
   }

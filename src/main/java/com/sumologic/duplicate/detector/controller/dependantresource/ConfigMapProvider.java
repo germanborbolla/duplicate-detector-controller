@@ -1,40 +1,26 @@
 package com.sumologic.duplicate.detector.controller.dependantresource;
 
-import com.sumologic.duplicate.detector.controller.Constants;
 import com.sumologic.duplicate.detector.controller.customresource.SingleDuplicateMessageScan;
 import io.fabric8.kubernetes.api.model.ConfigMap;
 import io.fabric8.kubernetes.api.model.ConfigMapBuilder;
-import io.fabric8.kubernetes.client.KubernetesClient;
 import io.javaoperatorsdk.operator.api.reconciler.Context;
-import io.javaoperatorsdk.operator.processing.dependent.kubernetes.CRUDKubernetesDependentResource;
-import io.javaoperatorsdk.operator.processing.dependent.kubernetes.KubernetesDependentResource;
-import io.javaoperatorsdk.operator.processing.dependent.kubernetes.KubernetesDependentResourceConfig;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.HashMap;
 import java.util.Map;
 
-public class ConfigMapDependantResource extends CRUDKubernetesDependentResource<ConfigMap, SingleDuplicateMessageScan> {
-
-    public static KubernetesDependentResource<ConfigMap, SingleDuplicateMessageScan> create(KubernetesClient client) {
-        ConfigMapDependantResource resource = new ConfigMapDependantResource();
-        resource.setKubernetesClient(client);
-        resource.configureWith(new KubernetesDependentResourceConfig<ConfigMap>()
-          .setLabelSelector(Constants.RESOURCE_LABEL_SELECTOR));
-        return resource;
-    }
+public class ConfigMapProvider implements DesiredProvider<ConfigMap, SingleDuplicateMessageScan> {
 
     private static final String TARGET_OBJECT_KEY = "duplicate_detector.targetObject";
     private static final Map<String, String> DEFAULT_PROPERTIES = Map.of(
       "duplicate_detector.onExitInvoke", "pkill fluent-bit",
       "duplicate_detector.parentWorkingDir", "/usr/sumo/system-tools/duplicate-detector-state");
-    public ConfigMapDependantResource() {
-        super(ConfigMap.class);
+    public ConfigMapProvider() {
     }
 
     @Override
-    protected ConfigMap desired(SingleDuplicateMessageScan scan, Context<SingleDuplicateMessageScan> context) {
+    public ConfigMap desired(SingleDuplicateMessageScan scan, Context<SingleDuplicateMessageScan> context) {
         // TODO(panda, 8/29/23): how to pass more properties
         // TODO(panda, 8/29/23): how to pass a log4j
         Map<String, String> properties = new HashMap<>(DEFAULT_PROPERTIES);
