@@ -5,16 +5,25 @@ import com.sumologic.duplicate.detector.controller.customresource.SingleDuplicat
 import io.fabric8.kubernetes.api.model.PodSpecBuilder;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.api.model.batch.v1.JobBuilder;
+import io.fabric8.kubernetes.client.KubernetesClient;
 import io.javaoperatorsdk.operator.api.reconciler.Context;
 import io.javaoperatorsdk.operator.processing.dependent.kubernetes.CRUDKubernetesDependentResource;
-import io.javaoperatorsdk.operator.processing.dependent.kubernetes.KubernetesDependent;
+import io.javaoperatorsdk.operator.processing.dependent.kubernetes.KubernetesDependentResource;
+import io.javaoperatorsdk.operator.processing.dependent.kubernetes.KubernetesDependentResourceConfig;
 
 import java.util.Objects;
 
 import static io.javaoperatorsdk.operator.ReconcilerUtils.loadYaml;
 
-@KubernetesDependent(labelSelector = Constants.RESOURCE_LABEL_SELECTOR)
 public class JobDependantResource extends CRUDKubernetesDependentResource<Job, SingleDuplicateMessageScan> {
+
+    public static KubernetesDependentResource<Job, SingleDuplicateMessageScan> create(KubernetesClient client) {
+        JobDependantResource resource = new JobDependantResource();
+        resource.setKubernetesClient(client);
+        resource.configureWith(new KubernetesDependentResourceConfig<Job>()
+          .setLabelSelector(Constants.RESOURCE_LABEL_SELECTOR));
+        return resource;
+    }
 
     private String systemToolsImage = "";
     public JobDependantResource() {

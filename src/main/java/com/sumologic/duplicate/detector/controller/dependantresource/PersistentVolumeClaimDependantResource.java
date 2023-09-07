@@ -5,20 +5,29 @@ import com.sumologic.duplicate.detector.controller.customresource.SingleDuplicat
 import io.fabric8.kubernetes.api.model.PersistentVolumeClaim;
 import io.fabric8.kubernetes.api.model.PersistentVolumeClaimBuilder;
 import io.fabric8.kubernetes.api.model.Quantity;
+import io.fabric8.kubernetes.client.KubernetesClient;
 import io.javaoperatorsdk.operator.api.reconciler.Context;
 import io.javaoperatorsdk.operator.processing.dependent.kubernetes.CRUDKubernetesDependentResource;
-import io.javaoperatorsdk.operator.processing.dependent.kubernetes.KubernetesDependent;
+import io.javaoperatorsdk.operator.processing.dependent.kubernetes.KubernetesDependentResource;
+import io.javaoperatorsdk.operator.processing.dependent.kubernetes.KubernetesDependentResourceConfig;
 
 import java.util.Optional;
 
 import static io.javaoperatorsdk.operator.ReconcilerUtils.loadYaml;
 
-@KubernetesDependent(labelSelector = Constants.RESOURCE_LABEL_SELECTOR)
 public class PersistentVolumeClaimDependantResource extends CRUDKubernetesDependentResource<PersistentVolumeClaim, SingleDuplicateMessageScan> {
     private static final String STORAGE_CLASS_NAME = Optional.ofNullable(System.getenv("PVC_STORAGE_CLASS_NAME"))
       .orElse("gp2");
     private static final String DEFAULT_SIZE = Optional.ofNullable(System.getenv("PVC_DEFAULT_SIZE")).
       orElse("300Gi");
+    public static KubernetesDependentResource<PersistentVolumeClaim, SingleDuplicateMessageScan> create(KubernetesClient client) {
+        PersistentVolumeClaimDependantResource resource = new PersistentVolumeClaimDependantResource();
+        resource.setKubernetesClient(client);
+        resource.configureWith(new KubernetesDependentResourceConfig<PersistentVolumeClaim>()
+          .setLabelSelector(Constants.RESOURCE_LABEL_SELECTOR));
+        return resource;
+    }
+
     public PersistentVolumeClaimDependantResource() {
         super(PersistentVolumeClaim.class);
     }

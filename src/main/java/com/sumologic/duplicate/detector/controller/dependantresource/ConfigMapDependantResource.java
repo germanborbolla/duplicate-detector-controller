@@ -4,16 +4,26 @@ import com.sumologic.duplicate.detector.controller.Constants;
 import com.sumologic.duplicate.detector.controller.customresource.SingleDuplicateMessageScan;
 import io.fabric8.kubernetes.api.model.ConfigMap;
 import io.fabric8.kubernetes.api.model.ConfigMapBuilder;
+import io.fabric8.kubernetes.client.KubernetesClient;
 import io.javaoperatorsdk.operator.api.reconciler.Context;
 import io.javaoperatorsdk.operator.processing.dependent.kubernetes.CRUDKubernetesDependentResource;
-import io.javaoperatorsdk.operator.processing.dependent.kubernetes.KubernetesDependent;
+import io.javaoperatorsdk.operator.processing.dependent.kubernetes.KubernetesDependentResource;
+import io.javaoperatorsdk.operator.processing.dependent.kubernetes.KubernetesDependentResourceConfig;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
 
-@KubernetesDependent(labelSelector = Constants.RESOURCE_LABEL_SELECTOR)
 public class ConfigMapDependantResource extends CRUDKubernetesDependentResource<ConfigMap, SingleDuplicateMessageScan> {
+
+    public static KubernetesDependentResource<ConfigMap, SingleDuplicateMessageScan> create(KubernetesClient client) {
+        ConfigMapDependantResource resource = new ConfigMapDependantResource();
+        resource.setKubernetesClient(client);
+        resource.configureWith(new KubernetesDependentResourceConfig<ConfigMap>()
+          .setLabelSelector(Constants.RESOURCE_LABEL_SELECTOR));
+        return resource;
+    }
 
     private static final String TARGET_OBJECT_KEY = "duplicate_detector.targetObject";
     private static final Map<String, String> DEFAULT_PROPERTIES = Map.of(
