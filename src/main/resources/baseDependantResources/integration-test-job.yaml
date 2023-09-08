@@ -1,0 +1,29 @@
+apiVersion: batch/v1
+kind: Job
+spec:
+  template:
+    spec:
+      containers:
+        - imagePullPolicy: Always
+          name: duplicate-detector
+          image: busybox:latest
+          args:
+          - /bin/sh
+          - -c
+          - >
+            echo Definitely running a scan for duplicates and not just sleeping;
+            sleep $SLEEP_TIME;
+          volumeMounts:
+            - mountPath: /usr/sumo/system-tools/logs
+              name: logs-dir
+            - mountPath: /usr/sumo/system-tools/config
+              name: config
+              readOnly: true
+            - mountPath: /usr/sumo/system-tools/duplicate-detector-state
+              name: duplicate-detector-pvc
+      volumes:
+        - emptyDir: {}
+          name: logs-dir
+      restartPolicy: OnFailure
+  backoffLimit: 1
+  ttlSecondsAfterFinished: 120

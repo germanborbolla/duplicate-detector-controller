@@ -12,7 +12,7 @@ public class Controller {
         Configurator.initialize("config", null, "classpath:log4j2.xml");
         KubernetesClient client = new KubernetesClientBuilder().build();
         Operator operator = new Operator();
-        operator.register(new SingleDuplicateMessageScanReconciler(client));
+        operator.register(new SingleDuplicateMessageScanReconciler(client, new ReconcilerConfiguration()));
         // TODO(panda, 8/29/23): get duration from environment
         operator.installShutdownHook(Duration.ofMinutes(2));
         operator.start();

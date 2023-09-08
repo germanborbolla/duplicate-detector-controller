@@ -1,31 +1,30 @@
 package com.sumologic.duplicate.detector.controller.dependantresource;
 
-import com.sumologic.duplicate.detector.controller.Constants;
+import com.sumologic.duplicate.detector.controller.ReconcilerConfiguration;
 import com.sumologic.duplicate.detector.controller.customresource.SingleDuplicateMessageScan;
+import io.fabric8.kubernetes.api.model.EnvVarBuilder;
 import io.fabric8.kubernetes.api.model.PodSpecBuilder;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.api.model.batch.v1.JobBuilder;
 import io.javaoperatorsdk.operator.api.reconciler.Context;
 
-import java.util.Objects;
-
 import static io.javaoperatorsdk.operator.ReconcilerUtils.loadYaml;
 
 public class JobProvider implements DesiredProvider<Job, SingleDuplicateMessageScan> {
 
-    private String systemToolsImage = "";
+    private ReconcilerConfiguration.JobConfiguration configuration;
 
-    public JobProvider() {
-        this(Objects.requireNonNull(System.getenv(Constants.SYSTEM_TOOLS_IMAGE_ENV_NAME)));
-    }
-
-    public JobProvider(String systemToolsImage) {
-        this.systemToolsImage = systemToolsImage;
+    public JobProvider(ReconcilerConfiguration.JobConfiguration configuration) {
+        this.configuration = configuration;
     }
 
     @Override
     public Job desired(SingleDuplicateMessageScan scan, Context<SingleDuplicateMessageScan> context) {
-        Job base = loadYaml(Job.class, getClass(), "/baseDependantResources/job.yaml");
+        String baseJobYaml = "/baseDependantResources/job.yaml";
+        if (configuration.isUseIntegrationTestJob()) {
+            baseJobYaml = "/baseDependantResources/integration-test-job.yaml";
+        }
+        Job base = loadYaml(Job.class, getClass(), baseJobYaml);
         PodSpecBuilder podSpecBuilder = new PodSpecBuilder(base.getSpec().getTemplate().getSpec());
         configureContainer(scan, podSpecBuilder);
         configureVolumes(scan, podSpecBuilder);
@@ -37,22 +36,35 @@ public class JobProvider implements DesiredProvider<Job, SingleDuplicateMessageS
     }
 
     private void configureContainer(SingleDuplicateMessageScan scan, PodSpecBuilder podSpecBuilder) {
-        podSpecBuilder
-          .editFirstContainer()
-          .withImage(systemToolsImage)
-          .addToArgs("--start-time " + scan.getSpec().getStartTime(),
-            "--end-time " + scan.getSpec().getEndTime(),
-            "--customers " + scan.getSpec().getCustomer())
-          .endContainer();
+        if (configuration.isUseIntegrationTestJob()) {
+            podSpecBuilder.editFirstContainer()
+              .withEnv(new EnvVarBuilder().withName("SLEEP_TIME")
+                .withValue(String.valueOf(configuration.getSleepTimeForIntegrationTest())).build())
+              .endContainer();
+        } else {
+            podSpecBuilder
+              .editFirstContainer()
+              .withImage(configuration.getSystemToolsImage())
+              .addToArgs("--start-time " + scan.getSpec().getStartTime(),
+                "--end-time " + scan.getSpec().getEndTime(),
+                "--customers " + scan.getSpec().getCustomer())
+              .endContainer();
+        }
     }
 
     private void configureVolumes(SingleDuplicateMessageScan scan, PodSpecBuilder podSpecBuilder) {
-        podSpecBuilder.addNewVolume().withName("config").withNewProjected()
-          .withDefaultMode(420)
-          .addNewSource().withNewConfigMap().withName("duplicate-detector-properties").endConfigMap().endSource()
-          .addNewSource().withNewConfigMap().withName(scan.getMetadata().getName()).endConfigMap().endSource()
-          .endProjected().endVolume()
-          .addNewVolume().withName("duplicate-detector-pvc")
+        if (configuration.isUseIntegrationTestJob()) {
+            podSpecBuilder.addNewVolume().withName("config").withNewConfigMap()
+              .withDefaultMode(420).withName(scan.getMetadata().getName())
+              .endConfigMap().endVolume();
+        } else {
+            podSpecBuilder.addNewVolume().withName("config").withNewProjected()
+              .withDefaultMode(420)
+              .addNewSource().withNewConfigMap().withName("duplicate-detector-properties").endConfigMap().endSource()
+              .addNewSource().withNewConfigMap().withName(scan.getMetadata().getName()).endConfigMap().endSource()
+              .endProjected().endVolume();
+        }
+        podSpecBuilder.addNewVolume().withName("duplicate-detector-pvc")
           .withNewPersistentVolumeClaim().withClaimName(scan.getMetadata().getName()).endPersistentVolumeClaim()
           .endVolume();
     }

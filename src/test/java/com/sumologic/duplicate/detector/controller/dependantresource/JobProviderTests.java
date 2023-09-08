@@ -1,5 +1,6 @@
 package com.sumologic.duplicate.detector.controller.dependantresource;
 
+import com.sumologic.duplicate.detector.controller.ReconcilerConfiguration;
 import com.sumologic.duplicate.detector.controller.customresource.SingleDuplicateMessageScan;
 import com.sumologic.duplicate.detector.controller.customresource.SingleDuplicateMessageScanSpec;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
@@ -15,7 +16,7 @@ public class JobProviderTests extends BaseTests {
   void testCreateBasicJob() {
     SingleDuplicateMessageScan scan = createScan(new SingleDuplicateMessageScanSpec("startTime", "endTime",
       "0000000000000005"));
-    JobProvider sut = new JobProvider("system-tools:123");
+    JobProvider sut = new JobProvider(new ReconcilerConfiguration.JobConfiguration("system-tools:123", false, 5));
     assertEqualsWithYaml(loadYaml(Job.class, getClass(), "/job/basic.yaml"), sut.desired(scan, null));
 
   }

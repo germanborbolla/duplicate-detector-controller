@@ -1,5 +1,6 @@
 plugins {
     id 'java'
+    id 'jvm-test-suite'
 }
 
 repositories {
@@ -44,16 +45,43 @@ dependencies {
     annotationProcessor "io.javaoperatorsdk:operator-framework:${javaOperatorVersion}"
     annotationProcessor "io.fabric8:crd-generator-apt:${fabric8Version}"
 
-    implementation "io.javaoperatorsdk:operator-framework-junit-5:${javaOperatorVersion}"
     testImplementation(platform('org.junit:junit-bom:5.10.0'))
     testImplementation('org.junit.jupiter:junit-jupiter')
 }
 
-test {
-    useJUnitPlatform()
-    testLogging {
-        events "passed", "skipped", "failed"
+testing {
+    test {
+        useJUnitPlatform()
+        testLogging {
+            events "passed", "skipped", "failed"
+        }
     }
+    suites {
+        integrationTest(JvmTestSuite) {
+            dependencies {
+                implementation(project(path))
+                implementation "io.javaoperatorsdk:operator-framework-junit-5:${javaOperatorVersion}"
+                implementation(sourceSets.test.output)
+                implementation(sourceSets.main.output)
+            }
+            sources {
+                java {
+                    srcDirs = ['src/it/java']
+                }
+            }
+            targets {
+                all {
+                    testTask.configure {
+                        shouldRunAfter(test)
+                        testLogging {
+                            events "passed", "skipped", "failed"
+                        }
+                    }
+                }
+            }
+        }
+    }
+
 }
 
 java {

@@ -26,14 +26,15 @@ public class SingleDuplicateMessageScanReconciler implements Reconciler<SingleDu
   private final KubernetesDependentResource<Job, SingleDuplicateMessageScan> jobDependentResource;
   private final Workflow<SingleDuplicateMessageScan> workflow;
 
-  public SingleDuplicateMessageScanReconciler(KubernetesClient client) {
+  public SingleDuplicateMessageScanReconciler(KubernetesClient client, ReconcilerConfiguration reconcilerConfiguration) {
     configMapDependentResource = ProviderKubernetesDependentResource.create(ConfigMap.class,
       new ConfigMapProvider(), client);
     pvcDependentResource = ProviderKubernetesDependentResource.create(PersistentVolumeClaim.class,
-      new PersistentVolumeClaimProvider(), client);
+      new PersistentVolumeClaimProvider(reconcilerConfiguration.persistentVolumeConfiguration), client);
     jobDependentResource = ProviderKubernetesDependentResource.create(Job.class,
-      new JobProvider(), client);
+      new JobProvider(reconcilerConfiguration.jobConfiguration), client);
 
+    // TODO(panda, 9/8/23): job shouldn't be created if PVC cannot be provisioned 
     workflow = new WorkflowBuilder<SingleDuplicateMessageScan>()
       .addDependentResource(configMapDependentResource)
       .addDependentResource(pvcDependentResource)
