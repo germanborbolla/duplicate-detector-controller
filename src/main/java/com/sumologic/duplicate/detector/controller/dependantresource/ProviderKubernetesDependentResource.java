@@ -2,11 +2,9 @@ package com.sumologic.duplicate.detector.controller.dependantresource;
 
 import com.sumologic.duplicate.detector.controller.Constants;
 import io.fabric8.kubernetes.api.model.HasMetadata;
-import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.javaoperatorsdk.operator.api.reconciler.Context;
 import io.javaoperatorsdk.operator.processing.dependent.kubernetes.CRUDKubernetesDependentResource;
-import io.javaoperatorsdk.operator.processing.dependent.kubernetes.KubernetesDependentResource;
 import io.javaoperatorsdk.operator.processing.dependent.kubernetes.KubernetesDependentResourceConfig;
 
 public class ProviderKubernetesDependentResource<R extends HasMetadata, P extends HasMetadata> extends CRUDKubernetesDependentResource<R, P> {
