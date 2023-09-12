@@ -26,4 +26,4 @@ spec:
           name: logs-dir
       restartPolicy: OnFailure
   backoffLimit: 1
-  ttlSecondsAfterFinished: 120
+

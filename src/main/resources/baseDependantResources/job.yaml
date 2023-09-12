@@ -47,4 +47,3 @@ spec:
         runAsUser: 1000
       shareProcessNamespace: true
   backoffLimit: 1
-  ttlSecondsAfterFinished: 120

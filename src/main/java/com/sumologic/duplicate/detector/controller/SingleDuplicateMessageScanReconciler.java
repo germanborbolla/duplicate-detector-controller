@@ -45,11 +45,11 @@ public class SingleDuplicateMessageScanReconciler implements Reconciler<SingleDu
   @Override
   public UpdateControl<SingleDuplicateMessageScan> reconcile(SingleDuplicateMessageScan scan,
                                                              Context<SingleDuplicateMessageScan> context) throws Exception {
-    // TODO(panda, 9/6/23): don't reconcile the same request if the job has already completed for it
     workflow.reconcile(scan, context);
 
-    return UpdateControl.patchStatus(scan.withStatus(
-      new DuplicateMessageScanStatus(context.getSecondaryResource(Job.class).orElseThrow().getStatus())));
+    return context.getSecondaryResource(Job.class)
+      .map(job -> UpdateControl.patchStatus(scan.withStatus(new DuplicateMessageScanStatus(job.getStatus()))))
+      .orElse(UpdateControl.noUpdate());
   }
 
   @Override

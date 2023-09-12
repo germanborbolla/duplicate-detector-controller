@@ -2,10 +2,11 @@ package com.sumologic.duplicate.detector.controller.customresource;
 
 import com.google.common.base.MoreObjects;
 import io.fabric8.kubernetes.api.model.batch.v1.JobStatus;
+import io.javaoperatorsdk.operator.api.ObservedGenerationAwareStatus;
 
 import java.util.Objects;
 
-public class DuplicateMessageScanStatus {
+public class DuplicateMessageScanStatus extends ObservedGenerationAwareStatus {
 
     private JobStatus jobStatus;
     private String error;
