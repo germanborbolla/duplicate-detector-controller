@@ -24,6 +24,10 @@ public class DuplicateMessageScanStatus extends ObservedGenerationAwareStatus {
         this.error = e.getMessage();
     }
 
+    public DuplicateMessageScanStatus(String error) {
+        this.jobStatus = null;
+        this.error = error;
+    }
     public String getError() {
         return error;
     }

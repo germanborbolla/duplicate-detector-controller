@@ -96,7 +96,31 @@ public class SingleReconcilerTests {
       .pollInterval(Duration.ofSeconds(1))
       .until(jobs::size, size -> size == 1);
   }
-  
+
+  @Test
+  @DisplayName("Not schedule the job if the volume cannot be provisioned")
+  void volumeCannotBeProvisioned() {
+    reconcilerConfiguration.persistentVolumeConfiguration.setDefaultStorageClassName("gp2");
+
+    String name = "test-scan";
+    createScan(name);
+
+    await()
+      .atMost(Duration.ofMinutes(1))
+      .pollInterval(Duration.ofSeconds(1)).untilAsserted(() -> {
+        PersistentVolumeClaim pvc = operator.get(PersistentVolumeClaim.class, name);
+        assertThat(pvc).isNotNull();
+        assertThat(pvc.getStatus().getPhase()).isNotNull();
+        assertThat(pvc.getStatus().getPhase()).isEqualTo("Pending");
+
+        assertThat(operator.get(Job.class, name)).isNull();
+
+        SingleDuplicateMessageScan scan = operator.get(SingleDuplicateMessageScan.class, name);
+        assertThat(scan.getStatus()).isNotNull();
+        assertThat(scan.getStatus().getError()).isNotNull();
+        assertThat(scan.getStatus().getError()).isEqualTo("Failed to provision volume");
+      });
+  }
   private void assertScanIsComplete(String name) {
     SingleDuplicateMessageScan scan = operator.get(SingleDuplicateMessageScan.class, name);
     assertThat(scan.getStatus()).isNotNull();

@@ -47,7 +47,7 @@ public class ReconcilerConfiguration {
   }
 
   public static class PersistentVolumeConfiguration {
-    private final String defaultStorageClassName;
+    private String defaultStorageClassName;
     private final String defaultSize;
 
     public PersistentVolumeConfiguration() {
@@ -62,6 +62,10 @@ public class ReconcilerConfiguration {
 
     public String getDefaultStorageClassName() {
       return defaultStorageClassName;
+    }
+
+    public void setDefaultStorageClassName(String defaultStorageClassName) {
+      this.defaultStorageClassName = defaultStorageClassName;
     }
 
     public String getDefaultSize() {
