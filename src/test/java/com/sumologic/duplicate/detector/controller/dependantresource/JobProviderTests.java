@@ -16,7 +16,7 @@ public class JobProviderTests extends BaseTests {
   void testCreateBasicJob() {
     SingleDuplicateMessageScan scan = createScan(new SingleDuplicateMessageScanSpec("startTime", "endTime",
       "0000000000000005"));
-    JobProvider sut = new JobProvider(new ReconcilerConfiguration.JobConfiguration("system-tools:123", false, 5));
+    JobProvider<SingleDuplicateMessageScan> sut = JobProvider.createForSingleDuplicateMessageScan(new ReconcilerConfiguration.JobConfiguration("system-tools:123", false, 5));
     assertEqualsWithYaml(loadYaml(Job.class, getClass(), "/job/basic.yaml"), sut.desired(scan, null));
 
   }

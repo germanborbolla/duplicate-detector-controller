@@ -36,4 +36,5 @@ public class SingleDuplicateMessageScan extends CustomResource<SingleDuplicateMe
       .addToLabels("app.kubernetes.io/part-of", getMetadata().getName()).
       build();
   }
+
 }

@@ -35,11 +35,12 @@ public class SingleDuplicateMessageScanReconciler implements Reconciler<SingleDu
 
   public SingleDuplicateMessageScanReconciler(KubernetesClient client, ReconcilerConfiguration reconcilerConfiguration) {
     configMapDependentResource = ProviderKubernetesDependentResource.create(ConfigMap.class,
-      new ConfigMapProvider(), client);
+      ConfigMapProvider.createForSingleDuplicateMessageScan(), client);
     pvcDependentResource = ProviderKubernetesDependentResource.create(PersistentVolumeClaim.class,
-      new PersistentVolumeClaimProvider(reconcilerConfiguration.persistentVolumeConfiguration), client);
+      PersistentVolumeClaimProvider.createForSingleDuplicateMessageScan(
+        reconcilerConfiguration.persistentVolumeConfiguration), client);
     jobDependentResource = ProviderKubernetesDependentResource.create(Job.class,
-      new JobProvider(reconcilerConfiguration.jobConfiguration), client);
+      JobProvider.createForSingleDuplicateMessageScan(reconcilerConfiguration.jobConfiguration), client);
 
     workflow = new WorkflowBuilder<SingleDuplicateMessageScan>()
       .addDependentResource(configMapDependentResource)

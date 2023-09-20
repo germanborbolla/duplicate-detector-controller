@@ -6,4 +6,6 @@ public class Constants {
     public static final String RESOURCE_LABEL_SELECTOR = "app.kubernetes.io/managed-by=" + OPERATOR_NAME;
 
     public static final String SYSTEM_TOOLS_IMAGE_ENV_NAME = "SYSTEM_TOOLS_IMAGE";
+
+    public static final String TARGET_OBJECT_KEY = "duplicate_detector.targetObject";
 }

@@ -13,11 +13,13 @@ public class PersistentVolumeClaimProviderTests extends BaseTests {
 
   private ReconcilerConfiguration.PersistentVolumeConfiguration defaultConfiguration =
     new ReconcilerConfiguration.PersistentVolumeConfiguration("gp2", "300Gi");
+  private PersistentVolumeClaimProvider<SingleDuplicateMessageScan> sut = PersistentVolumeClaimProvider
+    .createForSingleDuplicateMessageScan(defaultConfiguration);
+
   @DisplayName("Creates a PVC with the default size")
   @Test
   void testCreateAVolumeWithDefaultSize() {
     SingleDuplicateMessageScan scan = createScan();
-    PersistentVolumeClaimProvider sut = new PersistentVolumeClaimProvider(defaultConfiguration);
     assertEqualsWithYaml(loadYaml(PersistentVolumeClaim.class, getClass(), "/pvc/basic.yaml"),
       sut.desired(scan, null));
   }
@@ -28,7 +30,6 @@ public class PersistentVolumeClaimProviderTests extends BaseTests {
     SingleDuplicateMessageScanSpec spec = new SingleDuplicateMessageScanSpec();
     spec.setVolumeSize("100Gi");
     SingleDuplicateMessageScan scan = createScan(spec);
-    PersistentVolumeClaimProvider sut = new PersistentVolumeClaimProvider(defaultConfiguration);
     assertEqualsWithYaml(loadYaml(PersistentVolumeClaim.class, getClass(), "/pvc/custom-size.yaml"),
       sut.desired(scan, null));
   }
