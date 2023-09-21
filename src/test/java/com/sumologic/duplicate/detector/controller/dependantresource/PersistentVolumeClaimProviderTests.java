@@ -27,7 +27,7 @@ public class PersistentVolumeClaimProviderTests extends BaseTests {
   @DisplayName("Creates a PVC with the provided size")
   @Test
   void testCustomSize() {
-    SingleDuplicateMessageScanSpec spec = new SingleDuplicateMessageScanSpec();
+    SingleDuplicateMessageScanSpec spec = createSpec();
     spec.setVolumeSize("100Gi");
     SingleDuplicateMessageScan scan = createScan(spec);
     assertEqualsWithYaml(loadYaml(PersistentVolumeClaim.class, getClass(), "/pvc/custom-size.yaml"),

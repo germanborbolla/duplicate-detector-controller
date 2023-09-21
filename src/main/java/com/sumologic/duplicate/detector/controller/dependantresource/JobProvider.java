@@ -19,22 +19,16 @@ public class JobProvider<R extends HasMetadata> implements DesiredProvider<Job, 
 
     public static JobProvider<SingleDuplicateMessageScan> createForSingleDuplicateMessageScan(ReconcilerConfiguration.JobConfiguration configuration) {
         return new JobProvider<>(configuration,
-          SingleDuplicateMessageScan::buildDependentObjectMetadata,
-          scan -> List.of("--start-time " + scan.getSpec().getStartTime(),
-            "--end-time " + scan.getSpec().getEndTime(),
-            "--customers " + scan.getSpec().getCustomer()));
+          SingleDuplicateMessageScan::buildDependentObjectMetadata);
     }
 
     private final ReconcilerConfiguration.JobConfiguration configuration;
     private final Function<R, ObjectMeta> metadataFunction;
-    private final Function<R, List<String>> argumentsFunction;
 
     public JobProvider(ReconcilerConfiguration.JobConfiguration configuration,
-                       Function<R, ObjectMeta> metadataFunction,
-                       Function<R, List<String>> argumentsFunction) {
+                       Function<R, ObjectMeta> metadataFunction) {
         this.configuration = configuration;
         this.metadataFunction = metadataFunction;
-        this.argumentsFunction = argumentsFunction;
     }
 
     @Override
@@ -45,7 +39,7 @@ public class JobProvider<R extends HasMetadata> implements DesiredProvider<Job, 
         }
         Job base = loadYaml(Job.class, getClass(), baseJobYaml);
         PodSpecBuilder podSpecBuilder = new PodSpecBuilder(base.getSpec().getTemplate().getSpec());
-        configureContainer(argumentsFunction.apply(scan), podSpecBuilder);
+        configureContainer(podSpecBuilder);
         configureVolumes(scan.getMetadata().getName(), podSpecBuilder);
         return new JobBuilder(base)
           .withMetadata(metadataFunction.apply(scan))
@@ -54,7 +48,7 @@ public class JobProvider<R extends HasMetadata> implements DesiredProvider<Job, 
           .endTemplate().endSpec().build();
     }
 
-    private void configureContainer(List<String> arguments, PodSpecBuilder podSpecBuilder) {
+    private void configureContainer(PodSpecBuilder podSpecBuilder) {
         if (configuration.isUseIntegrationTestJob()) {
             podSpecBuilder.editFirstContainer()
               .withEnv(new EnvVarBuilder().withName("SLEEP_TIME")
@@ -64,7 +58,6 @@ public class JobProvider<R extends HasMetadata> implements DesiredProvider<Job, 
             podSpecBuilder
               .editFirstContainer()
               .withImage(configuration.getSystemToolsImage())
-              .addAllToArgs(arguments)
               .endContainer();
         }
     }

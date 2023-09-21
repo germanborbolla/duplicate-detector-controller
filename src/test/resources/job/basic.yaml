@@ -27,9 +27,6 @@ spec:
                 -XX:+HeapDumpOnOutOfMemoryError
           args:
             - com.sumologic.system.tools.block.duplicate_detector.DuplicateMessageScanner
-            - --start-time startTime
-            - --end-time endTime
-            - --customers 0000000000000005
           resources:
             limits:
               cpu: "8"

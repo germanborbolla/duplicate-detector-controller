@@ -15,7 +15,12 @@ public class BaseTests {
     .withName("test").withNamespace("test").addToLabels("mykey", "hello").build();
 
   protected SingleDuplicateMessageScan createScan() {
-    return createScan(new SingleDuplicateMessageScanSpec());
+    return createScan(createSpec());
+  }
+
+  protected SingleDuplicateMessageScanSpec createSpec() {
+    return new SingleDuplicateMessageScanSpec("startTime", "endTime",
+      "0000000000000005");
   }
 
   protected SingleDuplicateMessageScan createScan(SingleDuplicateMessageScanSpec spec) {

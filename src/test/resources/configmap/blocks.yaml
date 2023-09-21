@@ -9,6 +9,9 @@ metadata:
   namespace: "test"
 data:
   duplicate_detector.properties: |
+    duplicate-detector.customers=0000000000000005
+    duplicate-detector.endTime=endTime
+    duplicate-detector.startTime=startTime
     duplicate_detector.onExitInvoke=pkill fluent-bit
     duplicate_detector.parentWorkingDir=/usr/sumo/system-tools/duplicate-detector-state
     duplicate_detector.targetObject=blocks

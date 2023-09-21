@@ -23,7 +23,7 @@ public class ConfigMapProviderTests extends BaseTests {
   @DisplayName("Generated a config map that scans the target object")
   @Test
   void configMapWithDesiredTargetObject() {
-    SingleDuplicateMessageScanSpec spec = new SingleDuplicateMessageScanSpec();
+    SingleDuplicateMessageScanSpec spec = createSpec();
     spec.setTargetObject("blocks");
     SingleDuplicateMessageScan scan = createScan(spec);
     assertEqualsWithYaml(loadYaml(ConfigMap.class, getClass(), "/configmap/blocks.yaml"),

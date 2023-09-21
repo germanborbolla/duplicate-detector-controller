@@ -14,15 +14,20 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 
-import static com.sumologic.duplicate.detector.controller.Constants.TARGET_OBJECT_KEY;
-
 public class ConfigMapProvider<R extends HasMetadata> implements DesiredProvider<ConfigMap, R> {
+    private static final String TARGET_OBJECT_KEY = "duplicate_detector.targetObject";
+    private static final String CUSTOMERS_KEY = "duplicate-detector.customers";
+    private static final String START_TIME_KEY = "duplicate-detector.startTime";
+    private static final String END_TIME_KEY = "duplicate-detector.endTime";
 
     public static ConfigMapProvider<SingleDuplicateMessageScan> createForSingleDuplicateMessageScan() {
         return new ConfigMapProvider<>(
           SingleDuplicateMessageScan::buildDependentObjectMetadata,
-          scan -> Map.of(TARGET_OBJECT_KEY,
-            Optional.ofNullable(scan.getSpec().getTargetObject()).orElse("indices"))
+          scan -> Map.of(
+            TARGET_OBJECT_KEY, Optional.ofNullable(scan.getSpec().getTargetObject()).orElse("indices"),
+            CUSTOMERS_KEY, scan.getSpec().getCustomer(),
+            START_TIME_KEY, scan.getSpec().getStartTime(),
+            END_TIME_KEY, scan.getSpec().getEndTime())
         );
     }
 
