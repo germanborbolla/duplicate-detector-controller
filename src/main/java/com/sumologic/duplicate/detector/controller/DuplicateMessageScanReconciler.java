@@ -1,7 +1,7 @@
 package com.sumologic.duplicate.detector.controller;
 
+import com.sumologic.duplicate.detector.controller.customresource.DuplicateMessageScan;
 import com.sumologic.duplicate.detector.controller.customresource.DuplicateMessageScanStatus;
-import com.sumologic.duplicate.detector.controller.customresource.SingleDuplicateMessageScan;
 import com.sumologic.duplicate.detector.controller.dependantresource.ConfigMapProvider;
 import com.sumologic.duplicate.detector.controller.dependantresource.JobProvider;
 import com.sumologic.duplicate.detector.controller.dependantresource.PersistentVolumeClaimProvider;
@@ -10,43 +10,35 @@ import io.fabric8.kubernetes.api.model.ConfigMap;
 import io.fabric8.kubernetes.api.model.PersistentVolumeClaim;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.client.KubernetesClient;
-import io.javaoperatorsdk.operator.Operator;
 import io.javaoperatorsdk.operator.api.reconciler.*;
-import io.javaoperatorsdk.operator.api.reconciler.dependent.DependentResource;
 import io.javaoperatorsdk.operator.processing.dependent.kubernetes.KubernetesDependentResource;
 import io.javaoperatorsdk.operator.processing.dependent.workflow.Condition;
 import io.javaoperatorsdk.operator.processing.dependent.workflow.Workflow;
 import io.javaoperatorsdk.operator.processing.dependent.workflow.WorkflowBuilder;
 import io.javaoperatorsdk.operator.processing.event.source.EventSource;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.Map;
-import java.util.Optional;
 
 @ControllerConfiguration
-public class SingleDuplicateMessageScanReconciler implements Reconciler<SingleDuplicateMessageScan>, ErrorStatusHandler<SingleDuplicateMessageScan>, EventSourceInitializer<SingleDuplicateMessageScan> {
+public class DuplicateMessageScanReconciler implements Reconciler<DuplicateMessageScan>, ErrorStatusHandler<DuplicateMessageScan>, EventSourceInitializer<DuplicateMessageScan> {
+  private final KubernetesDependentResource<ConfigMap, DuplicateMessageScan> configMapDependentResource;
+  private final KubernetesDependentResource<PersistentVolumeClaim, DuplicateMessageScan> pvcDependentResource;
+  private final KubernetesDependentResource<Job, DuplicateMessageScan> jobDependentResource;
+  private final Workflow<DuplicateMessageScan> workflow;
 
-  private final Logger logger = LoggerFactory.getLogger(SingleDuplicateMessageScanReconciler.class);
-  private final KubernetesDependentResource<ConfigMap, SingleDuplicateMessageScan> configMapDependentResource;
-  private final KubernetesDependentResource<PersistentVolumeClaim, SingleDuplicateMessageScan> pvcDependentResource;
-  private final KubernetesDependentResource<Job, SingleDuplicateMessageScan> jobDependentResource;
-  private final Workflow<SingleDuplicateMessageScan> workflow;
-
-  public SingleDuplicateMessageScanReconciler(KubernetesClient client, ReconcilerConfiguration reconcilerConfiguration) {
+  public DuplicateMessageScanReconciler(KubernetesClient client, ReconcilerConfiguration reconcilerConfiguration) {
     configMapDependentResource = ProviderKubernetesDependentResource.create(ConfigMap.class,
-      ConfigMapProvider.createForSingleDuplicateMessageScan(), client);
+      new ConfigMapProvider(), client);
     pvcDependentResource = ProviderKubernetesDependentResource.create(PersistentVolumeClaim.class,
-      PersistentVolumeClaimProvider.createForSingleDuplicateMessageScan(
-        reconcilerConfiguration.persistentVolumeConfiguration), client);
+      new PersistentVolumeClaimProvider(reconcilerConfiguration.persistentVolumeConfiguration), client);
     jobDependentResource = ProviderKubernetesDependentResource.create(Job.class,
-      JobProvider.createForSingleDuplicateMessageScan(reconcilerConfiguration.jobConfiguration), client);
+      new JobProvider(reconcilerConfiguration.jobConfiguration), client);
 
-    workflow = new WorkflowBuilder<SingleDuplicateMessageScan>()
+    workflow = new WorkflowBuilder<DuplicateMessageScan>()
       .addDependentResource(configMapDependentResource)
       .addDependentResource(pvcDependentResource)
       .addDependentResource(jobDependentResource).dependsOn(configMapDependentResource, pvcDependentResource).withReconcilePrecondition(
-        (Condition<Job, SingleDuplicateMessageScan>) (dependentResource, primary, context) ->
+        (Condition<Job, DuplicateMessageScan>) (dependentResource, primary, context) ->
           context.getSecondaryResource(PersistentVolumeClaim.class)
             .map(pvc -> pvc.getStatus().getPhase().equals("Bound"))
             .orElse(false))
@@ -54,8 +46,8 @@ public class SingleDuplicateMessageScanReconciler implements Reconciler<SingleDu
   }
 
   @Override
-  public UpdateControl<SingleDuplicateMessageScan> reconcile(SingleDuplicateMessageScan scan,
-                                                             Context<SingleDuplicateMessageScan> context) throws Exception {
+  public UpdateControl<DuplicateMessageScan> reconcile(DuplicateMessageScan scan,
+                                                       Context<DuplicateMessageScan> context) throws Exception {
     workflow.reconcile(scan, context);
 
     return context.getSecondaryResource(PersistentVolumeClaim.class)
@@ -68,14 +60,14 @@ public class SingleDuplicateMessageScanReconciler implements Reconciler<SingleDu
   }
 
   @Override
-  public ErrorStatusUpdateControl<SingleDuplicateMessageScan> updateErrorStatus(SingleDuplicateMessageScan resource,
-                                                                                Context<SingleDuplicateMessageScan> context,
-                                                                                Exception e) {
+  public ErrorStatusUpdateControl<DuplicateMessageScan> updateErrorStatus(DuplicateMessageScan resource,
+                                                                          Context<DuplicateMessageScan> context,
+                                                                          Exception e) {
     return ErrorStatusUpdateControl.patchStatus(resource.withStatus(new DuplicateMessageScanStatus(e)));
   }
 
   @Override
-  public Map<String, EventSource> prepareEventSources(EventSourceContext<SingleDuplicateMessageScan> context) {
+  public Map<String, EventSource> prepareEventSources(EventSourceContext<DuplicateMessageScan> context) {
     return EventSourceInitializer.nameEventSourcesFromDependentResource(context,
       configMapDependentResource, pvcDependentResource, jobDependentResource);
   }

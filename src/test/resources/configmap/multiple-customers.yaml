@@ -1,0 +1,31 @@
+apiVersion: "v1"
+kind: "ConfigMap"
+metadata:
+  labels:
+    mykey: "hello"
+    app.kubernetes.io/managed-by: "duplicate-detector-operator"
+    app.kubernetes.io/part-of: "test"
+  name: "test"
+  namespace: "test"
+data:
+  duplicate_detector-0.properties: |
+    duplicate-detector.customers=0000000000000005
+    duplicate-detector.endTime=endTime
+    duplicate-detector.startTime=startTime
+    duplicate_detector.onExitInvoke=pkill fluent-bit
+    duplicate_detector.parentWorkingDir=/usr/sumo/system-tools/duplicate-detector-state-0
+    duplicate_detector.targetObject=indices
+  duplicate_detector-1.properties: |
+    duplicate-detector.customers=0000000000000006
+    duplicate-detector.endTime=endTime
+    duplicate-detector.startTime=startTime
+    duplicate_detector.onExitInvoke=pkill fluent-bit
+    duplicate_detector.parentWorkingDir=/usr/sumo/system-tools/duplicate-detector-state-1
+    duplicate_detector.targetObject=indices
+  duplicate_detector-2.properties: |
+    duplicate-detector.customers=0000000000000007
+    duplicate-detector.endTime=endTime
+    duplicate-detector.startTime=startTime
+    duplicate_detector.onExitInvoke=pkill fluent-bit
+    duplicate_detector.parentWorkingDir=/usr/sumo/system-tools/duplicate-detector-state-2
+    duplicate_detector.targetObject=indices

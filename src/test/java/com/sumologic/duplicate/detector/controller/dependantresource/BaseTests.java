@@ -1,32 +1,38 @@
 package com.sumologic.duplicate.detector.controller.dependantresource;
 
-import com.sumologic.duplicate.detector.controller.customresource.SingleDuplicateMessageScan;
-import com.sumologic.duplicate.detector.controller.customresource.SingleDuplicateMessageScanSpec;
+import com.sumologic.duplicate.detector.controller.customresource.DuplicateMessageScan;
+import com.sumologic.duplicate.detector.controller.customresource.DuplicateMessageScanSpec;
 import io.fabric8.kubernetes.api.model.ObjectMeta;
 import io.fabric8.kubernetes.api.model.ObjectMetaBuilder;
 import io.fabric8.kubernetes.client.utils.Serialization;
 import org.apache.commons.lang3.StringUtils;
 import org.junit.jupiter.api.Assertions;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import java.util.List;
 
 public class BaseTests {
   protected ObjectMeta objectMeta = new ObjectMetaBuilder()
     .withName("test").withNamespace("test").addToLabels("mykey", "hello").build();
 
-  protected SingleDuplicateMessageScan createScan() {
-    return createScan(createSpec());
+  protected DuplicateMessageScan createSingleCustomerScan() { return createScan(createSingleCustomerSpec()); }
+  protected DuplicateMessageScan createMultipleCustomerScan() {
+    return createScan(createMultipleCustomerSpec());
   }
 
-  protected SingleDuplicateMessageScanSpec createSpec() {
-    return new SingleDuplicateMessageScanSpec("startTime", "endTime",
-      "0000000000000005");
-  }
-
-  protected SingleDuplicateMessageScan createScan(SingleDuplicateMessageScanSpec spec) {
-    SingleDuplicateMessageScan scan = new SingleDuplicateMessageScan(spec);
+  protected DuplicateMessageScan createScan(DuplicateMessageScanSpec spec) {
+    DuplicateMessageScan scan = new DuplicateMessageScan(spec);
     scan.setMetadata(objectMeta);
     return scan;
+  }
+
+  protected DuplicateMessageScanSpec createSingleCustomerSpec() {
+    return new DuplicateMessageScanSpec("startTime", "endTime",
+      List.of("0000000000000005"));
+  }
+
+  protected DuplicateMessageScanSpec createMultipleCustomerSpec() {
+    return new DuplicateMessageScanSpec("startTime", "endTime",
+      List.of("0000000000000005", "0000000000000006", "0000000000000007"));
   }
 
   protected <T> void assertEqualsWithYaml(T expected, T actual) {

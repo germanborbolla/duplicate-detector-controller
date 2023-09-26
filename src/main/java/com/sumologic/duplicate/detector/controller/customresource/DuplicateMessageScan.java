@@ -12,17 +12,18 @@ import static com.sumologic.duplicate.detector.controller.Constants.OPERATOR_NAM
 
 @Group("com.sumologic.duplicate.detector")
 @Version("v1")
-@ShortNames("sdms")
-public class SingleDuplicateMessageScan extends CustomResource<SingleDuplicateMessageScanSpec, DuplicateMessageScanStatus>
-  implements Namespaced {
-  public SingleDuplicateMessageScan() {
+@ShortNames("dms")
+public class DuplicateMessageScan
+  extends CustomResource<DuplicateMessageScanSpec, DuplicateMessageScanStatus> implements Namespaced {
+
+  public DuplicateMessageScan() {
   }
 
-  public SingleDuplicateMessageScan(SingleDuplicateMessageScanSpec spec) {
+  public DuplicateMessageScan(DuplicateMessageScanSpec spec) {
     this.spec = spec;
   }
 
-  public SingleDuplicateMessageScan withStatus(DuplicateMessageScanStatus status) {
+  public DuplicateMessageScan withStatus(DuplicateMessageScanStatus status) {
     this.status = status;
     return this;
   }
@@ -36,5 +37,4 @@ public class SingleDuplicateMessageScan extends CustomResource<SingleDuplicateMe
       .addToLabels("app.kubernetes.io/part-of", getMetadata().getName()).
       build();
   }
-
 }

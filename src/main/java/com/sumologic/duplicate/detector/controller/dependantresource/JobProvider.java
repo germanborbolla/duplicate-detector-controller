@@ -1,38 +1,24 @@
 package com.sumologic.duplicate.detector.controller.dependantresource;
 
 import com.sumologic.duplicate.detector.controller.ReconcilerConfiguration;
-import com.sumologic.duplicate.detector.controller.customresource.SingleDuplicateMessageScan;
+import com.sumologic.duplicate.detector.controller.customresource.DuplicateMessageScan;
 import io.fabric8.kubernetes.api.model.EnvVarBuilder;
-import io.fabric8.kubernetes.api.model.HasMetadata;
-import io.fabric8.kubernetes.api.model.ObjectMeta;
 import io.fabric8.kubernetes.api.model.PodSpecBuilder;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.api.model.batch.v1.JobBuilder;
 import io.javaoperatorsdk.operator.api.reconciler.Context;
 
-import java.util.List;
-import java.util.function.Function;
-
 import static io.javaoperatorsdk.operator.ReconcilerUtils.loadYaml;
 
-public class JobProvider<R extends HasMetadata> implements DesiredProvider<Job, R> {
-
-    public static JobProvider<SingleDuplicateMessageScan> createForSingleDuplicateMessageScan(ReconcilerConfiguration.JobConfiguration configuration) {
-        return new JobProvider<>(configuration,
-          SingleDuplicateMessageScan::buildDependentObjectMetadata);
-    }
-
+public class JobProvider implements DesiredProvider<Job, DuplicateMessageScan> {
     private final ReconcilerConfiguration.JobConfiguration configuration;
-    private final Function<R, ObjectMeta> metadataFunction;
 
-    public JobProvider(ReconcilerConfiguration.JobConfiguration configuration,
-                       Function<R, ObjectMeta> metadataFunction) {
+    public JobProvider(ReconcilerConfiguration.JobConfiguration configuration) {
         this.configuration = configuration;
-        this.metadataFunction = metadataFunction;
     }
 
     @Override
-    public Job desired(R scan, Context<R> context) {
+    public Job desired(DuplicateMessageScan scan, Context<DuplicateMessageScan> context) {
         String baseJobYaml = "/baseDependantResources/job.yaml";
         if (configuration.isUseIntegrationTestJob()) {
             baseJobYaml = "/baseDependantResources/integration-test-job.yaml";
@@ -41,11 +27,19 @@ public class JobProvider<R extends HasMetadata> implements DesiredProvider<Job, 
         PodSpecBuilder podSpecBuilder = new PodSpecBuilder(base.getSpec().getTemplate().getSpec());
         configureContainer(podSpecBuilder);
         configureVolumes(scan.getMetadata().getName(), podSpecBuilder);
-        return new JobBuilder(base)
-          .withMetadata(metadataFunction.apply(scan))
+        JobBuilder jobBuilder = new JobBuilder(base)
+          .withMetadata(scan.buildDependentObjectMetadata())
           .editSpec().editTemplate()
           .withSpec(podSpecBuilder.build())
-          .endTemplate().endSpec().build();
+          .endTemplate().endSpec();
+        if (scan.getSpec().buildInputs().size() > 1) {
+            jobBuilder.editSpec()
+              .withCompletions(scan.getSpec().getCustomers().size())
+              .withCompletionMode("Indexed")
+              .withParallelism(scan.getSpec().getMaxParallelScans())
+              .endSpec();
+        }
+        return jobBuilder.build();
     }
 
     private void configureContainer(PodSpecBuilder podSpecBuilder) {

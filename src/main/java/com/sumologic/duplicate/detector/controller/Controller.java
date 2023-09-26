@@ -10,9 +10,12 @@ import java.time.Duration;
 public class Controller {
     public static void main(String[] args) {
         Configurator.initialize("config", null, "classpath:log4j2.xml");
+
+        ReconcilerConfiguration reconcilerConfiguration = new ReconcilerConfiguration();
+
         KubernetesClient client = new KubernetesClientBuilder().build();
         Operator operator = new Operator();
-        operator.register(new SingleDuplicateMessageScanReconciler(client, new ReconcilerConfiguration()));
+        operator.register(new DuplicateMessageScanReconciler(client, reconcilerConfiguration));
         // TODO(panda, 8/29/23): get duration from environment
         operator.installShutdownHook(Duration.ofMinutes(2));
         operator.start();

@@ -2,15 +2,15 @@
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
-  name: singleduplicatemessagescans.com.sumologic.duplicate.detector
+  name: duplicatemessagescans.com.sumologic.duplicate.detector
 spec:
   group: com.sumologic.duplicate.detector
   names:
-    kind: SingleDuplicateMessageScan
-    plural: singleduplicatemessagescans
+    kind: DuplicateMessageScan
+    plural: duplicatemessagescans
     shortNames:
-    - sdms
-    singular: singleduplicatemessagescan
+    - dms
+    singular: duplicatemessagescan
   scope: Namespaced
   versions:
   - name: v1
@@ -19,22 +19,27 @@ spec:
         properties:
           spec:
             properties:
-              customer:
-                type: string
               startTime:
                 type: string
               endTime:
                 type: string
+              customers:
+                items:
+                  type: string
+                type: array
               volumeSize:
                 nullable: true
                 type: string
               targetObject:
                 nullable: true
                 type: string
+              maxParallelScans:
+                minimum: 1.0
+                type: integer
             required:
-            - customer
             - startTime
             - endTime
+            - customers
             type: object
           status:
             properties:
@@ -85,6 +90,8 @@ spec:
                 type: object
               error:
                 type: string
+              observedGeneration:
+                type: integer
             type: object
         type: object
     served: true

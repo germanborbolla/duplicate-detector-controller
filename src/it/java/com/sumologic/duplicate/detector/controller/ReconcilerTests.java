@@ -1,7 +1,7 @@
 package com.sumologic.duplicate.detector.controller;
 
-import com.sumologic.duplicate.detector.controller.customresource.SingleDuplicateMessageScan;
-import com.sumologic.duplicate.detector.controller.customresource.SingleDuplicateMessageScanSpec;
+import com.sumologic.duplicate.detector.controller.customresource.DuplicateMessageScan;
+import com.sumologic.duplicate.detector.controller.customresource.DuplicateMessageScanSpec;
 import io.fabric8.kubernetes.api.model.ConfigMap;
 import io.fabric8.kubernetes.api.model.ObjectMetaBuilder;
 import io.fabric8.kubernetes.api.model.PersistentVolumeClaim;
@@ -24,7 +24,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
-public class SingleReconcilerTests {
+public class ReconcilerTests {
 
   static KubernetesClient client = new KubernetesClientBuilder().build();
 
@@ -35,7 +35,7 @@ public class SingleReconcilerTests {
   @RegisterExtension
   AbstractOperatorExtension operator = LocallyRunOperatorExtension.builder()
     .waitForNamespaceDeletion(false).preserveNamespaceOnError(true)
-    .withReconciler(new SingleDuplicateMessageScanReconciler(client, reconcilerConfiguration))
+    .withReconciler(new DuplicateMessageScanReconciler(client, reconcilerConfiguration))
     .build();
 
   @Test
@@ -59,12 +59,13 @@ public class SingleReconcilerTests {
 
           Job job = operator.get(Job.class, name);
           assertThat(job).isNotNull();
-          assertThat(job.getStatus().getSucceeded()).isEqualTo(1);
+          assertThat(job.getStatus().getSucceeded()).isEqualTo(2);
           assertThat(job.getStatus().getCompletionTime()).isNotNull();
 
           assertScanIsComplete(name);
         });
   }
+
   @Test
   @DisplayName("Should not create multiple jobs")
   void oneJobPerScan() {
@@ -115,22 +116,24 @@ public class SingleReconcilerTests {
 
         assertThat(operator.get(Job.class, name)).isNull();
 
-        SingleDuplicateMessageScan scan = operator.get(SingleDuplicateMessageScan.class, name);
+        DuplicateMessageScan scan = operator.get(DuplicateMessageScan.class, name);
         assertThat(scan.getStatus()).isNotNull();
         assertThat(scan.getStatus().getError()).isNotNull();
         assertThat(scan.getStatus().getError()).isEqualTo("Failed to provision volume");
       });
   }
   private void assertScanIsComplete(String name) {
-    SingleDuplicateMessageScan scan = operator.get(SingleDuplicateMessageScan.class, name);
+    DuplicateMessageScan scan = operator.get(DuplicateMessageScan.class, name);
     assertThat(scan.getStatus()).isNotNull();
     assertThat(scan.getStatus().getJobStatus()).isNotNull();
-    assertThat(Optional.ofNullable(scan.getStatus().getJobStatus().getSucceeded()).orElse(0)).isEqualTo(1);
+    assertThat(Optional.ofNullable(scan.getStatus().getJobStatus().getSucceeded()).orElse(0))
+      .isEqualTo(scan.getSpec().getCustomers().size());
   }
 
   private void createScan(String name) {
-    SingleDuplicateMessageScan scan = new SingleDuplicateMessageScan(new SingleDuplicateMessageScanSpec(
-      "2023-09-06T10:00:00-07:00", "2023-09-06T10:01:00-07:00", "0000000000000475"));
+    DuplicateMessageScan scan = new DuplicateMessageScan(new DuplicateMessageScanSpec(
+      "2023-09-06T10:00:00-07:00", "2023-09-06T10:01:00-07:00",
+      List.of("0000000000000475", "0000000000000476")));
     scan.setMetadata(new ObjectMetaBuilder().withName(name).withNamespace(operator.getNamespace())
       .build());
     operator.create(scan);

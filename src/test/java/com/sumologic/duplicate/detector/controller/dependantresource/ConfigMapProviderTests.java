@@ -1,7 +1,7 @@
 package com.sumologic.duplicate.detector.controller.dependantresource;
 
-import com.sumologic.duplicate.detector.controller.customresource.SingleDuplicateMessageScan;
-import com.sumologic.duplicate.detector.controller.customresource.SingleDuplicateMessageScanSpec;
+import com.sumologic.duplicate.detector.controller.customresource.DuplicateMessageScan;
+import com.sumologic.duplicate.detector.controller.customresource.DuplicateMessageScanSpec;
 import io.fabric8.kubernetes.api.model.ConfigMap;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -9,23 +9,31 @@ import org.junit.jupiter.api.Test;
 import static io.javaoperatorsdk.operator.ReconcilerUtils.loadYaml;
 
 public class ConfigMapProviderTests extends BaseTests {
-  private ConfigMapProvider<SingleDuplicateMessageScan> sut = ConfigMapProvider
-    .createForSingleDuplicateMessageScan();
 
-  @DisplayName("Generates expected config map that scans indices")
+  private ConfigMapProvider sut = new ConfigMapProvider();
+
   @Test
+  @DisplayName("Generates a config map for a single customer")
   void generateBasicConfigMap() {
-    SingleDuplicateMessageScan scan = createScan();
-    assertEqualsWithYaml(loadYaml(ConfigMap.class, getClass(), "/configmap/basic.yaml"),
+    DuplicateMessageScan scan = createSingleCustomerScan();
+    assertEqualsWithYaml(loadYaml(ConfigMap.class, getClass(), "/configmap/single-customer.yaml"),
       sut.desired(scan, null));
   }
 
-  @DisplayName("Generated a config map that scans the target object")
   @Test
-  void configMapWithDesiredTargetObject() {
-    SingleDuplicateMessageScanSpec spec = createSpec();
+  @DisplayName("Generates a config map for multiple customers")
+  void multipleCustomers() {
+    DuplicateMessageScan scan = createMultipleCustomerScan();
+    assertEqualsWithYaml(loadYaml(ConfigMap.class, getClass(), "/configmap/multiple-customers.yaml"),
+      sut.desired(scan, null));
+  }
+
+  @Test
+  @DisplayName("Generates a config map using the provided target object")
+  void useProvidedTargetObject() {
+    DuplicateMessageScanSpec spec = createSingleCustomerSpec();
     spec.setTargetObject("blocks");
-    SingleDuplicateMessageScan scan = createScan(spec);
+    DuplicateMessageScan scan = createScan(spec);
     assertEqualsWithYaml(loadYaml(ConfigMap.class, getClass(), "/configmap/blocks.yaml"),
       sut.desired(scan, null));
   }
