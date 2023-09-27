@@ -5,15 +5,21 @@ import com.google.common.base.MoreObjects;
 import io.fabric8.generator.annotation.Min;
 import io.fabric8.generator.annotation.Nullable;
 import io.fabric8.generator.annotation.Required;
+import org.apache.commons.lang3.tuple.Pair;
+import org.apache.commons.lang3.tuple.Triple;
 
+import java.time.Duration;
+import java.time.Instant;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class DuplicateMessageScanSpec {
-  private static final String CUSTOMERS_KEY = "duplicate-detector.customers";
-  private static final String START_TIME_KEY = "duplicate-detector.startTime";
-  private static final String END_TIME_KEY = "duplicate-detector.endTime";
-  private static final String TARGET_OBJECT_KEY = "duplicate_detector.targetObject";
-  private static final String WORKING_DIR_KEY = "duplicate_detector.parentWorkingDir";
+  protected static final String CUSTOMERS_KEY = "duplicate-detector.customers";
+  protected static final String START_TIME_KEY = "duplicate-detector.startTime";
+  protected static final String END_TIME_KEY = "duplicate-detector.endTime";
+  protected static final String TARGET_OBJECT_KEY = "duplicate_detector.targetObject";
+  protected static final String WORKING_DIR_KEY = "duplicate_detector.parentWorkingDir";
   private static final Map<String, String> DEFAULT_PROPERTIES = Map.of(
     "duplicate_detector.onExitInvoke", "pkill fluent-bit");
   private static final String DEFAULT_TARGET_OBJECT = "indices";
@@ -24,6 +30,7 @@ public class DuplicateMessageScanSpec {
   private String volumeSize;
   private String targetObject;
   private int maxParallelScans = 1;
+  private String timeRangeSegmentLength;
 
   public DuplicateMessageScanSpec() {
   }
@@ -94,17 +101,30 @@ public class DuplicateMessageScanSpec {
     this.maxParallelScans = maxParallelScans;
   }
 
+  @JsonPropertyDescription("Length of how long each scan should be, for example to break the full time range into 5m segments set this to PT5m")
+  @Nullable
+  public String getTimeRangeSegmentLength() {
+    return timeRangeSegmentLength;
+  }
+
+  public void setTimeRangeSegmentLength(String timeRangeSegmentLength) {
+    this.timeRangeSegmentLength = timeRangeSegmentLength;
+  }
+
   @Override
   public boolean equals(Object o) {
     if (this == o) return true;
     if (o == null || getClass() != o.getClass()) return false;
     DuplicateMessageScanSpec that = (DuplicateMessageScanSpec) o;
-    return maxParallelScans == that.maxParallelScans && startTime.equals(that.startTime) && endTime.equals(that.endTime) && customers.equals(that.customers) && Objects.equals(volumeSize, that.volumeSize) && Objects.equals(targetObject, that.targetObject);
+    return maxParallelScans == that.maxParallelScans && startTime.equals(that.startTime)
+      && endTime.equals(that.endTime) && customers.equals(that.customers)
+      && Objects.equals(volumeSize, that.volumeSize) && Objects.equals(targetObject, that.targetObject)
+      && Objects.equals(timeRangeSegmentLength, that.timeRangeSegmentLength);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(startTime, endTime, customers, volumeSize, targetObject, maxParallelScans);
+    return Objects.hash(startTime, endTime, customers, volumeSize, targetObject, maxParallelScans, timeRangeSegmentLength);
   }
 
   @Override
@@ -116,30 +136,58 @@ public class DuplicateMessageScanSpec {
       .add("volumeSize", volumeSize)
       .add("targetObject", targetObject)
       .add("maxParallelScans", maxParallelScans)
+      .add("timeRangeSegmentLength", timeRangeSegmentLength)
       .toString();
   }
 
   public Map<String, Map<String, String>> buildInputs() {
-    if (customers.isEmpty()) {
-      throw new IllegalArgumentException("We need some customers");
-    } else if (customers.size() == 1) {
+    List<Triple<String, String, String>> withTimeRangeSplit = zipCustomerAndSegments();
+    if (withTimeRangeSplit.size() == 1) {
       return Map.of("duplicate_detector.properties",
-        mapFor(customers.get(0), "/usr/sumo/system-tools/duplicate-detector-state"));
+        mapFor(zipCustomerAndSegments().get(0), "/usr/sumo/system-tools/duplicate-detector-state"));
     } else {
       Map<String, Map<String, String>> inputs = new HashMap<>();
-      for (int i = 0; i < customers.size(); i++) {
+      for (int i = 0; i < withTimeRangeSplit.size(); i++) {
         inputs.put(String.format("duplicate_detector-%1d.properties", i),
-          mapFor(customers.get(i), String.format("/usr/sumo/system-tools/duplicate-detector-state-%1d", i)));
+          mapFor(withTimeRangeSplit.get(i),
+            String.format("/usr/sumo/system-tools/duplicate-detector-state-%1d", i)));
       }
       return inputs;
     }
   }
 
-  private Map<String, String> mapFor(String customers, String workingDir) {
+  protected List<Triple<String, String, String>> zipCustomerAndSegments() {
+    List<Pair<String, String>> scanningSegments = getScanningSegments();
+    return customers.stream()
+      .flatMap(customer -> scanningSegments.stream().map(interval ->
+        Triple.ofNonNull(customer, interval.getLeft(), interval.getRight())))
+      .collect(Collectors.toList());
+  }
+
+  protected List<Pair<String, String>> getScanningSegments() {
+    if (timeRangeSegmentLength == null) {
+      return List.of(Pair.of(startTime, endTime));
+    } else {
+      List<Pair<String, String>> segments = new LinkedList<>();
+      Duration period = Duration.parse(timeRangeSegmentLength);
+      Instant startTimeInstant = DateTimeFormatter.ISO_DATE_TIME.parse(startTime, Instant::from);
+      Instant endTimeInstant = DateTimeFormatter.ISO_DATE_TIME.parse(endTime, Instant::from);
+      Instant segmentEndTime = startTimeInstant.plus(period);
+      while (segmentEndTime.isBefore(endTimeInstant)) {
+        segments.add(Pair.of(startTimeInstant.toString(), segmentEndTime.toString()));
+        startTimeInstant = segmentEndTime;
+        segmentEndTime = startTimeInstant.plus(period);
+      }
+      segments.add(Pair.of(startTimeInstant.toString(), endTimeInstant.toString()));
+      return segments;
+    }
+  }
+
+  private Map<String, String> mapFor(Triple<String, String, String> customersAndTimes, String workingDir) {
     Map<String, String> map = new HashMap<>(DEFAULT_PROPERTIES);
-    map.put(CUSTOMERS_KEY, customers);
-    map.put(START_TIME_KEY, startTime);
-    map.put(END_TIME_KEY, endTime);
+    map.put(CUSTOMERS_KEY, customersAndTimes.getLeft());
+    map.put(START_TIME_KEY, customersAndTimes.getMiddle());
+    map.put(END_TIME_KEY, customersAndTimes.getRight());
     map.put(TARGET_OBJECT_KEY, Optional.ofNullable(targetObject).orElse(DEFAULT_TARGET_OBJECT));
     map.put(WORKING_DIR_KEY, workingDir);
     return map;

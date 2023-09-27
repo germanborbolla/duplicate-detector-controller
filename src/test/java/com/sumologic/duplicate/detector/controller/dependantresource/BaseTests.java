@@ -26,12 +26,12 @@ public class BaseTests {
   }
 
   protected DuplicateMessageScanSpec createSingleCustomerSpec() {
-    return new DuplicateMessageScanSpec("startTime", "endTime",
+    return new DuplicateMessageScanSpec("2023-09-06T10:00:00-07:00", "2023-09-06T10:15:00-07:00",
       List.of("0000000000000005"));
   }
 
   protected DuplicateMessageScanSpec createMultipleCustomerSpec() {
-    return new DuplicateMessageScanSpec("startTime", "endTime",
+    return new DuplicateMessageScanSpec("2023-09-06T10:00:00-07:00", "2023-09-06T10:15:00-07:00",
       List.of("0000000000000005", "0000000000000006", "0000000000000007"));
   }
 
