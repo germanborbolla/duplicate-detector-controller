@@ -1,2 +1,4 @@
 systemToolsImage:
-  version: 21.0-1693602664-18812-50c7a1af621d
+  version: 21.0-1695935770-917-23292630e040_german
+image:
+  pullPolicy: Always

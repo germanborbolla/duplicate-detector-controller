@@ -4,7 +4,11 @@ metadata:
   namespace: stag-distributed-systems
   generateName: scan-
 spec:
-  startTime: '2023-09-27T10:00:00-07:00'
-  endTime: '2023-09-27T10:15:00-07:00'
+  startTime: '2023-09-28T10:00:00-07:00'
+  endTime: '2023-09-28T11:00:00-07:00'
   customers:
     - '0000000000000475'
+    - '0000000006CC612C'
+    - '000000000698677F'
+  timeRangeSegmentLength: 'PT5m'
+  maxParallelScans: 2
