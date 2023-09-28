@@ -26,7 +26,7 @@ public class JobProvider implements DesiredProvider<Job, DuplicateMessageScan> {
         Job base = loadYaml(Job.class, getClass(), baseJobYaml);
         PodSpecBuilder podSpecBuilder = new PodSpecBuilder(base.getSpec().getTemplate().getSpec());
         configureContainer(podSpecBuilder);
-        configureVolumes(scan.getMetadata().getName(), podSpecBuilder);
+        configureVolumes(scan, podSpecBuilder);
         JobBuilder jobBuilder = new JobBuilder(base)
           .withMetadata(scan.buildDependentObjectMetadata())
           .editSpec().editTemplate()
@@ -56,7 +56,8 @@ public class JobProvider implements DesiredProvider<Job, DuplicateMessageScan> {
         }
     }
 
-    private void configureVolumes(String name, PodSpecBuilder podSpecBuilder) {
+    private void configureVolumes(DuplicateMessageScan scan, PodSpecBuilder podSpecBuilder) {
+        String name = scan.getMetadata().getName();
         if (configuration.isUseIntegrationTestJob()) {
             podSpecBuilder.addNewVolume().withName("config").withNewConfigMap()
               .withDefaultMode(420).withName(name)
@@ -68,8 +69,13 @@ public class JobProvider implements DesiredProvider<Job, DuplicateMessageScan> {
               .addNewSource().withNewConfigMap().withName(name).endConfigMap().endSource()
               .endProjected().endVolume();
         }
-        podSpecBuilder.addNewVolume().withName("duplicate-detector-pvc")
-          .withNewPersistentVolumeClaim().withClaimName(name).endPersistentVolumeClaim()
-          .endVolume();
+        if (scan.getSpec().getMaxParallelScans() == 1) {
+            podSpecBuilder.addNewVolume().withName("duplicate-detector-pvc")
+              .withNewPersistentVolumeClaim().withClaimName(name).endPersistentVolumeClaim()
+              .endVolume();
+        } else {
+            podSpecBuilder.addNewVolume().withName("duplicate-detector-pvc")
+              .withNewEmptyDir().endEmptyDir().endVolume();
+        }
     }
 }

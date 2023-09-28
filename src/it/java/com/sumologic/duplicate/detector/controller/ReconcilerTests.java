@@ -28,6 +28,10 @@ public class ReconcilerTests {
 
   static KubernetesClient client = new KubernetesClientBuilder().build();
 
+  private DuplicateMessageScanSpec spec = new DuplicateMessageScanSpec(
+    "2023-09-06T10:00:00-07:00", "2023-09-06T10:01:00-07:00",
+    List.of("0000000000000475", "0000000000000476"));
+
   private ReconcilerConfiguration reconcilerConfiguration = new ReconcilerConfiguration(
     new ReconcilerConfiguration.JobConfiguration("busybox:latest", true, 1),
     new ReconcilerConfiguration.PersistentVolumeConfiguration("standard", "100Mi"));
@@ -99,27 +103,23 @@ public class ReconcilerTests {
   }
 
   @Test
-  @DisplayName("Not schedule the job if the volume cannot be provisioned")
-  void volumeCannotBeProvisioned() {
-    reconcilerConfiguration.persistentVolumeConfiguration.setDefaultStorageClassName("gp2");
-
+  @DisplayName("Not create a volume if parallelism is greater than one")
+  void noVolumeWhenParallelGreaterThanOne() {
     String name = "test-scan";
+    spec.setMaxParallelScans(2);
     createScan(name);
-
     await()
       .atMost(Duration.ofMinutes(1))
       .pollInterval(Duration.ofSeconds(1)).untilAsserted(() -> {
         PersistentVolumeClaim pvc = operator.get(PersistentVolumeClaim.class, name);
-        assertThat(pvc).isNotNull();
-        assertThat(pvc.getStatus().getPhase()).isNotNull();
-        assertThat(pvc.getStatus().getPhase()).isEqualTo("Pending");
+        assertThat(pvc).isNull();
 
-        assertThat(operator.get(Job.class, name)).isNull();
+        Job job = operator.get(Job.class, name);
+        assertThat(job).isNotNull();
+        assertThat(job.getStatus().getSucceeded()).isEqualTo(2);
+        assertThat(job.getStatus().getCompletionTime()).isNotNull();
 
-        DuplicateMessageScan scan = operator.get(DuplicateMessageScan.class, name);
-        assertThat(scan.getStatus()).isNotNull();
-        assertThat(scan.getStatus().getError()).isNotNull();
-        assertThat(scan.getStatus().getError()).isEqualTo("Failed to provision volume");
+        assertScanIsComplete(name);
       });
   }
   private void assertScanIsComplete(String name) {
@@ -131,9 +131,7 @@ public class ReconcilerTests {
   }
 
   private void createScan(String name) {
-    DuplicateMessageScan scan = new DuplicateMessageScan(new DuplicateMessageScanSpec(
-      "2023-09-06T10:00:00-07:00", "2023-09-06T10:01:00-07:00",
-      List.of("0000000000000475", "0000000000000476")));
+    DuplicateMessageScan scan = new DuplicateMessageScan(spec);
     scan.setMetadata(new ObjectMetaBuilder().withName(name).withNamespace(operator.getNamespace())
       .build());
     operator.create(scan);

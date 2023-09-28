@@ -57,8 +57,7 @@ spec:
               - configMap:
                   name: test
         - name: duplicate-detector-pvc
-          persistentVolumeClaim:
-            claimName: test
+          emptyDir: {}
       restartPolicy: OnFailure
       securityContext:
         fsGroup: 1000

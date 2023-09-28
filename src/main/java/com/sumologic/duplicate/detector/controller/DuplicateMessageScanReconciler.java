@@ -16,15 +16,19 @@ import io.javaoperatorsdk.operator.processing.dependent.workflow.Condition;
 import io.javaoperatorsdk.operator.processing.dependent.workflow.Workflow;
 import io.javaoperatorsdk.operator.processing.dependent.workflow.WorkflowBuilder;
 import io.javaoperatorsdk.operator.processing.event.source.EventSource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 
 @ControllerConfiguration
 public class DuplicateMessageScanReconciler implements Reconciler<DuplicateMessageScan>, ErrorStatusHandler<DuplicateMessageScan>, EventSourceInitializer<DuplicateMessageScan> {
+  private final Logger logger = LoggerFactory.getLogger(getClass());
   private final KubernetesDependentResource<ConfigMap, DuplicateMessageScan> configMapDependentResource;
   private final KubernetesDependentResource<PersistentVolumeClaim, DuplicateMessageScan> pvcDependentResource;
   private final KubernetesDependentResource<Job, DuplicateMessageScan> jobDependentResource;
-  private final Workflow<DuplicateMessageScan> workflow;
+  private final Workflow<DuplicateMessageScan> nonParallelWorkflow;
+  private final Workflow<DuplicateMessageScan> parallelWorkflow;
 
   public DuplicateMessageScanReconciler(KubernetesClient client, ReconcilerConfiguration reconcilerConfiguration) {
     configMapDependentResource = ProviderKubernetesDependentResource.create(ConfigMap.class,
@@ -34,28 +38,30 @@ public class DuplicateMessageScanReconciler implements Reconciler<DuplicateMessa
     jobDependentResource = ProviderKubernetesDependentResource.create(Job.class,
       new JobProvider(reconcilerConfiguration.jobConfiguration), client);
 
-    workflow = new WorkflowBuilder<DuplicateMessageScan>()
+    nonParallelWorkflow = new WorkflowBuilder<DuplicateMessageScan>()
       .addDependentResource(configMapDependentResource)
       .addDependentResource(pvcDependentResource)
-      .addDependentResource(jobDependentResource).dependsOn(configMapDependentResource, pvcDependentResource).withReconcilePrecondition(
-        (Condition<Job, DuplicateMessageScan>) (dependentResource, primary, context) ->
-          context.getSecondaryResource(PersistentVolumeClaim.class)
-            .map(pvc -> pvc.getStatus().getPhase().equals("Bound"))
-            .orElse(false))
+      .addDependentResource(jobDependentResource).dependsOn(configMapDependentResource, pvcDependentResource)
+      .build();
+
+    parallelWorkflow = new WorkflowBuilder<DuplicateMessageScan>()
+      .addDependentResource(configMapDependentResource)
+      .addDependentResource(jobDependentResource).dependsOn(configMapDependentResource)
       .build();
   }
 
   @Override
   public UpdateControl<DuplicateMessageScan> reconcile(DuplicateMessageScan scan,
                                                        Context<DuplicateMessageScan> context) throws Exception {
-    workflow.reconcile(scan, context);
+    logger.info("Reconciling scan {}", scan);
+    if (scan.getSpec().getMaxParallelScans() == 1) {
+      nonParallelWorkflow.reconcile(scan, context);
+    } else {
+      parallelWorkflow.reconcile(scan, context);
+    }
 
-    return context.getSecondaryResource(PersistentVolumeClaim.class)
-      .filter(pvc -> !pvc.getStatus().getPhase().equals("Bound"))
-      .map(pvc -> UpdateControl.patchStatus(scan.withStatus(
-        new DuplicateMessageScanStatus("Failed to provision volume"))))
-      .or(() -> context.getSecondaryResource(Job.class)
-        .map(job -> UpdateControl.patchStatus(scan.withStatus(new DuplicateMessageScanStatus(job.getStatus())))))
+    return context.getSecondaryResource(Job.class)
+        .map(job -> UpdateControl.patchStatus(scan.withStatus(new DuplicateMessageScanStatus(job.getStatus()))))
       .orElse(UpdateControl.noUpdate());
   }
 
