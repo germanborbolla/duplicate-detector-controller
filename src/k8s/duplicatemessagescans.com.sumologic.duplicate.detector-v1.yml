@@ -36,6 +36,9 @@ spec:
               maxParallelScans:
                 minimum: 1.0
                 type: integer
+              timeRangeSegmentLength:
+                nullable: true
+                type: string
             required:
             - startTime
             - endTime

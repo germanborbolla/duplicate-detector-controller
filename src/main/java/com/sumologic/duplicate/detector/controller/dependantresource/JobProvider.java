@@ -34,7 +34,7 @@ public class JobProvider implements DesiredProvider<Job, DuplicateMessageScan> {
           .endTemplate().endSpec();
         if (scan.getSpec().buildInputs().size() > 1) {
             jobBuilder.editSpec()
-              .withCompletions(scan.getSpec().getCustomers().size())
+              .withCompletions(scan.getSpec().buildInputs().size())
               .withCompletionMode("Indexed")
               .withParallelism(scan.getSpec().getMaxParallelScans())
               .endSpec();

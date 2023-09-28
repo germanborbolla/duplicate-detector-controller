@@ -15,9 +15,9 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public class DuplicateMessageScanSpec {
-  protected static final String CUSTOMERS_KEY = "duplicate-detector.customers";
-  protected static final String START_TIME_KEY = "duplicate-detector.startTime";
-  protected static final String END_TIME_KEY = "duplicate-detector.endTime";
+  protected static final String CUSTOMERS_KEY = "duplicate_detector.customers";
+  protected static final String START_TIME_KEY = "duplicate_detector.startTime";
+  protected static final String END_TIME_KEY = "duplicate_detector.endTime";
   protected static final String TARGET_OBJECT_KEY = "duplicate_detector.targetObject";
   protected static final String WORKING_DIR_KEY = "duplicate_detector.parentWorkingDir";
   private static final Map<String, String> DEFAULT_PROPERTIES = Map.of(

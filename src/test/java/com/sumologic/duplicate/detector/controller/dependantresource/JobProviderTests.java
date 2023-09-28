@@ -38,4 +38,13 @@ public class JobProviderTests extends BaseTests {
     assertEqualsWithYaml(loadYaml(Job.class, getClass(), "/job/parallelism-3.yaml"),
       sut.desired(scan, null));
   }
+
+  @Test
+  @DisplayName("Generates a job that executes time range segments in parallel")
+  void singleCustomerSplitTimeRange() {
+    DuplicateMessageScanSpec spec = createSingleCustomerSpec();
+    spec.setTimeRangeSegmentLength("PT5m");
+    assertEqualsWithYaml(loadYaml(Job.class, getClass(), "/job/single-customer-split-time-range.yaml"),
+      sut.desired(createScan(spec), null));
+  }
 }
