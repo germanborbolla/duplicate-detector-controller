@@ -2,6 +2,7 @@ package com.sumologic.duplicate.detector.controller.customresource;
 
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
 import com.google.common.base.MoreObjects;
+import io.fabric8.generator.annotation.Max;
 import io.fabric8.generator.annotation.Min;
 import io.fabric8.generator.annotation.Nullable;
 import io.fabric8.generator.annotation.Required;
@@ -31,6 +32,8 @@ public class DuplicateMessageScanSpec {
   private String targetObject;
   private int maxParallelScans = 1;
   private String timeRangeSegmentLength;
+
+  private int retriesPerSegment = 3;
 
   public DuplicateMessageScanSpec() {
   }
@@ -111,6 +114,17 @@ public class DuplicateMessageScanSpec {
     this.timeRangeSegmentLength = timeRangeSegmentLength;
   }
 
+  @JsonPropertyDescription("How many times to attempt each segment, valid range is 1-5, default is 3")
+  @Min(1)
+  @Max(5)
+  public int getRetriesPerSegment() {
+    return retriesPerSegment;
+  }
+
+  public void setRetriesPerSegment(int retriesPerSegment) {
+    this.retriesPerSegment = retriesPerSegment;
+  }
+
   @Override
   public boolean equals(Object o) {
     if (this == o) return true;
@@ -119,12 +133,14 @@ public class DuplicateMessageScanSpec {
     return maxParallelScans == that.maxParallelScans && startTime.equals(that.startTime)
       && endTime.equals(that.endTime) && customers.equals(that.customers)
       && Objects.equals(volumeSize, that.volumeSize) && Objects.equals(targetObject, that.targetObject)
-      && Objects.equals(timeRangeSegmentLength, that.timeRangeSegmentLength);
+      && Objects.equals(timeRangeSegmentLength, that.timeRangeSegmentLength)
+      && retriesPerSegment == that.retriesPerSegment;
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(startTime, endTime, customers, volumeSize, targetObject, maxParallelScans, timeRangeSegmentLength);
+    return Objects.hash(startTime, endTime, customers, volumeSize, targetObject, maxParallelScans,
+      timeRangeSegmentLength, retriesPerSegment);
   }
 
   @Override
@@ -137,6 +153,7 @@ public class DuplicateMessageScanSpec {
       .add("targetObject", targetObject)
       .add("maxParallelScans", maxParallelScans)
       .add("timeRangeSegmentLength", timeRangeSegmentLength)
+      .add("retriesPerSegment", retriesPerSegment)
       .toString();
   }
 

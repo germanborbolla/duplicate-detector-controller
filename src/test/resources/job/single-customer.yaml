@@ -65,4 +65,4 @@ spec:
         runAsGroup: 1000
         runAsUser: 1000
       shareProcessNamespace: true
-  backoffLimit: 1
+  backoffLimit: 3

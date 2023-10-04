@@ -6,7 +6,10 @@ import io.fabric8.kubernetes.api.model.EnvVarBuilder;
 import io.fabric8.kubernetes.api.model.PodSpecBuilder;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.api.model.batch.v1.JobBuilder;
+import io.fabric8.kubernetes.api.model.batch.v1.JobFluent;
 import io.javaoperatorsdk.operator.api.reconciler.Context;
+
+import java.util.Map;
 
 import static io.javaoperatorsdk.operator.ReconcilerUtils.loadYaml;
 
@@ -27,19 +30,19 @@ public class JobProvider implements DesiredProvider<Job, DuplicateMessageScan> {
         PodSpecBuilder podSpecBuilder = new PodSpecBuilder(base.getSpec().getTemplate().getSpec());
         configureContainer(podSpecBuilder);
         configureVolumes(scan, podSpecBuilder);
-        JobBuilder jobBuilder = new JobBuilder(base)
+        JobFluent<JobBuilder>.SpecNested<JobBuilder> jobSpecBuilder = new JobBuilder(base)
           .withMetadata(scan.buildDependentObjectMetadata())
-          .editSpec().editTemplate()
-          .withSpec(podSpecBuilder.build())
-          .endTemplate().endSpec();
-        if (scan.getSpec().buildInputs().size() > 1) {
-            jobBuilder.editSpec()
-              .withCompletions(scan.getSpec().buildInputs().size())
+          .editSpec();
+        jobSpecBuilder.editTemplate().withSpec(podSpecBuilder.build()).endTemplate();
+        Map<String, Map<String, String>> inputs = scan.getSpec().buildInputs();
+        if (inputs.size() > 1) {
+            jobSpecBuilder
+              .withCompletions(inputs.size())
               .withCompletionMode("Indexed")
-              .withParallelism(scan.getSpec().getMaxParallelScans())
-              .endSpec();
+              .withParallelism(scan.getSpec().getMaxParallelScans());
         }
-        return jobBuilder.build();
+        jobSpecBuilder.withBackoffLimit(scan.getSpec().getRetriesPerSegment() * inputs.size());
+        return jobSpecBuilder.endSpec().build();
     }
 
     private void configureContainer(PodSpecBuilder podSpecBuilder) {
