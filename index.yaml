@@ -3,9 +3,9 @@ entries:
   duplicate-detector-controller:
   - apiVersion: v2
     appVersion: 1.1.1
-    created: "2023-10-03T18:21:23.654496-07:00"
+    created: "2023-10-03T18:34:22.211685-07:00"
     description: Controller to run scans for duplicate messages
-    digest: d24bb2953ea24c011cb930611ead462b918d39ffabee9edd4f65a47ad30c1b25
+    digest: 6f2448b8a292048bd29b6993936ec23b3a09bb25bf76de20ae424fa91dcd9130
     name: duplicate-detector-controller
     type: application
     urls:
@@ -31,4 +31,4 @@ entries:
     urls:
     - packages/duplicate-detector-controller-1.0.1.tgz
     version: 1.0.1
-generated: "2023-10-03T18:21:23.652539-07:00"
+generated: "2023-10-03T18:34:22.210445-07:00"
