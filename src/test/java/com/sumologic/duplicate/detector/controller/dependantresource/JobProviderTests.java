@@ -12,7 +12,7 @@ import static io.javaoperatorsdk.operator.ReconcilerUtils.loadYaml;
 public class JobProviderTests extends BaseTests {
 
   private JobProvider sut = new JobProvider(new ReconcilerConfiguration.JobConfiguration(
-    "system-tools:123", false, 5));
+    "system-tools:123", false, 5, true));
   @Test
   @DisplayName("Generates a job for a scan with a single customer")
   void singleCustomer() {

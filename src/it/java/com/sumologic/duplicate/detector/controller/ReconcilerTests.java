@@ -33,7 +33,7 @@ public class ReconcilerTests {
     List.of("0000000000000475", "0000000000000476"));
 
   private ReconcilerConfiguration reconcilerConfiguration = new ReconcilerConfiguration(
-    new ReconcilerConfiguration.JobConfiguration("busybox:latest", true, 1),
+    new ReconcilerConfiguration.JobConfiguration("busybox:latest", true, 1, true),
     new ReconcilerConfiguration.PersistentVolumeConfiguration("standard", "100Mi"));
 
   @RegisterExtension

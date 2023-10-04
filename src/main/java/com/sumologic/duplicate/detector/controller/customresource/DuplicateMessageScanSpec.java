@@ -21,8 +21,9 @@ public class DuplicateMessageScanSpec {
   protected static final String END_TIME_KEY = "duplicate_detector.endTime";
   protected static final String TARGET_OBJECT_KEY = "duplicate_detector.targetObject";
   protected static final String WORKING_DIR_KEY = "duplicate_detector.parentWorkingDir";
-  private static final Map<String, String> DEFAULT_PROPERTIES = Map.of(
-    "duplicate_detector.onExitInvoke", "pkill fluent-bit");
+
+  private static final Map.Entry<String, String> KILL_SIDECAR_ENTRY =
+    Map.entry("duplicate_detector.onExitInvoke", "pkill fluent-bit");
   private static final String DEFAULT_TARGET_OBJECT = "indices";
 
   private String startTime;
@@ -157,17 +158,18 @@ public class DuplicateMessageScanSpec {
       .toString();
   }
 
-  public Map<String, Map<String, String>> buildInputs() {
+  public Map<String, Map<String, String>> buildInputs(boolean includeKillSidecar) {
     List<Triple<String, String, String>> withTimeRangeSplit = zipCustomerAndSegments();
     if (withTimeRangeSplit.size() == 1) {
       return Map.of("duplicate_detector.properties",
-        mapFor(zipCustomerAndSegments().get(0), "/usr/sumo/system-tools/duplicate-detector-state"));
+        mapFor(zipCustomerAndSegments().get(0), "/usr/sumo/system-tools/duplicate-detector-state",
+          includeKillSidecar));
     } else {
       Map<String, Map<String, String>> inputs = new HashMap<>();
       for (int i = 0; i < withTimeRangeSplit.size(); i++) {
         inputs.put(String.format("duplicate_detector-%1d.properties", i),
           mapFor(withTimeRangeSplit.get(i),
-            String.format("/usr/sumo/system-tools/duplicate-detector-state-%1d", i)));
+            String.format("/usr/sumo/system-tools/duplicate-detector-state-%1d", i), includeKillSidecar));
       }
       return inputs;
     }
@@ -200,8 +202,12 @@ public class DuplicateMessageScanSpec {
     }
   }
 
-  private Map<String, String> mapFor(Triple<String, String, String> customersAndTimes, String workingDir) {
-    Map<String, String> map = new HashMap<>(DEFAULT_PROPERTIES);
+  private Map<String, String> mapFor(Triple<String, String, String> customersAndTimes, String workingDir,
+                                     boolean includeKillSidecar) {
+    Map<String, String> map = new HashMap<>();
+    if (includeKillSidecar) {
+      map.put(KILL_SIDECAR_ENTRY.getKey(),KILL_SIDECAR_ENTRY.getValue());
+    }
     map.put(CUSTOMERS_KEY, customersAndTimes.getLeft());
     map.put(START_TIME_KEY, customersAndTimes.getMiddle());
     map.put(END_TIME_KEY, customersAndTimes.getRight());

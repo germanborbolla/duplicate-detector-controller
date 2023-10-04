@@ -34,7 +34,7 @@ public class JobProvider implements DesiredProvider<Job, DuplicateMessageScan> {
           .withMetadata(scan.buildDependentObjectMetadata())
           .editSpec();
         jobSpecBuilder.editTemplate().withSpec(podSpecBuilder.build()).endTemplate();
-        Map<String, Map<String, String>> inputs = scan.getSpec().buildInputs();
+        Map<String, Map<String, String>> inputs = scan.getSpec().buildInputs(configuration.isKillTailingSidecars());
         if (inputs.size() > 1) {
             jobSpecBuilder
               .withCompletions(inputs.size())

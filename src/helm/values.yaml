@@ -24,3 +24,5 @@ resources:
     cpu: 100m
     memory: 256Mi
 
+killTailingSidecars: True
+

@@ -22,15 +22,21 @@ public class ReconcilerConfiguration {
     private final boolean useIntegrationTestJob;
     private final int sleepTimeForIntegrationTest;
 
+    private final boolean killTailingSidecars;
+
     public JobConfiguration() {
       this(Objects.requireNonNull(System.getenv(Constants.SYSTEM_TOOLS_IMAGE_ENV_NAME),
-        "System tools image env variable not set"), false, 0);
+        "System tools image env variable not set"), false, 0,
+        Optional.ofNullable(System.getenv(Constants.KILL_TAILING_SIDECARS_ENV_NAME))
+          .map(Boolean::parseBoolean).orElse(false));
     }
 
-    public JobConfiguration(String systemToolsImage, boolean useIntegrationTestJob, int sleepForIntegrationTest) {
+    public JobConfiguration(String systemToolsImage, boolean useIntegrationTestJob, int sleepForIntegrationTest,
+                            boolean killTailingSidecars) {
       this.systemToolsImage = systemToolsImage;
       this.useIntegrationTestJob = useIntegrationTestJob;
       this.sleepTimeForIntegrationTest = sleepForIntegrationTest;
+      this.killTailingSidecars = killTailingSidecars;
     }
 
     public String getSystemToolsImage() {
@@ -43,6 +49,10 @@ public class ReconcilerConfiguration {
 
     public int getSleepTimeForIntegrationTest() {
       return sleepTimeForIntegrationTest;
+    }
+
+    public boolean isKillTailingSidecars() {
+      return killTailingSidecars;
     }
   }
 

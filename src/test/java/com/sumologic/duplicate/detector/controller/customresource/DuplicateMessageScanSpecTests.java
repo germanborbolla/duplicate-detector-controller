@@ -78,7 +78,15 @@ public class DuplicateMessageScanSpecTests {
         DuplicateMessageScanSpec.TARGET_OBJECT_KEY, "indices",
         DuplicateMessageScanSpec.WORKING_DIR_KEY, "/usr/sumo/system-tools/duplicate-detector-state",
         "duplicate_detector.onExitInvoke", "pkill fluent-bit")
-      ).entrySet(), spec.buildInputs().entrySet());
+      ).entrySet(), spec.buildInputs(true).entrySet());
+    assertIterableEquals(
+      Map.of("duplicate_detector.properties", Map.of(
+        DuplicateMessageScanSpec.CUSTOMERS_KEY, "0000000000000005",
+        DuplicateMessageScanSpec.START_TIME_KEY, "2023-09-06T10:00:00-07:00",
+        DuplicateMessageScanSpec.END_TIME_KEY, "2023-09-06T10:15:00-07:00",
+        DuplicateMessageScanSpec.TARGET_OBJECT_KEY, "indices",
+        DuplicateMessageScanSpec.WORKING_DIR_KEY, "/usr/sumo/system-tools/duplicate-detector-state")
+      ).entrySet(), spec.buildInputs(false).entrySet());
 
     spec.setTargetObject("blocks");
     assertIterableEquals(
@@ -89,11 +97,11 @@ public class DuplicateMessageScanSpecTests {
         DuplicateMessageScanSpec.TARGET_OBJECT_KEY, "blocks",
         DuplicateMessageScanSpec.WORKING_DIR_KEY, "/usr/sumo/system-tools/duplicate-detector-state",
         "duplicate_detector.onExitInvoke", "pkill fluent-bit")
-      ).entrySet(), spec.buildInputs().entrySet());
+      ).entrySet(), spec.buildInputs(true).entrySet());
 
     spec.setCustomers(List.of("0000000000000005", "0000000000000006"));
     spec.setTargetObject(null);
-    Map<String, Map<String, String>> inputs = spec.buildInputs();
+    Map<String, Map<String, String>> inputs = spec.buildInputs(true);
     assertAll("first input", () -> assertTrue(inputs.containsKey("duplicate_detector-0.properties")), () -> {
       Map<String, String> input = inputs.get("duplicate_detector-0.properties");
       assertAll(() -> assertEquals("0000000000000005", input.get(DuplicateMessageScanSpec.CUSTOMERS_KEY)),
@@ -110,5 +118,6 @@ public class DuplicateMessageScanSpecTests {
         () -> assertEquals("/usr/sumo/system-tools/duplicate-detector-state-1",
           input.get(DuplicateMessageScanSpec.WORKING_DIR_KEY)));
     });
+
   }
 }

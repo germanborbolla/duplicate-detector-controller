@@ -30,6 +30,8 @@ spec:
               value: {{ .Values.persistentVolumeClaim.defaultSize }}
             - name: CHECK_CRD_ENV_KEY
               value: "false"
+            - name: KILL_TAILING_SIDECARS
+              value: {{ .Values.killTailingSidecars }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
       tolerations:
