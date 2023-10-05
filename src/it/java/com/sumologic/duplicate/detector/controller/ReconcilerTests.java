@@ -71,9 +71,10 @@ public class ReconcilerTests {
   }
 
   @Test
-  @DisplayName("Should not create multiple jobs")
-  void oneJobPerScan() {
+  @DisplayName("Should not create multiple jobs for simple jobs")
+  void oneJobPerSimpleScan() {
     String name = "test-scan";
+    spec.setCustomers(List.of("0000000000000475"));
     createScan(name);
 
     List<Job> jobs = new ArrayList<>(1);

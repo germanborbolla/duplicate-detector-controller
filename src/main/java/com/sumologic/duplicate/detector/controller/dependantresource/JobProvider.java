@@ -3,13 +3,12 @@ package com.sumologic.duplicate.detector.controller.dependantresource;
 import com.sumologic.duplicate.detector.controller.ReconcilerConfiguration;
 import com.sumologic.duplicate.detector.controller.customresource.DuplicateMessageScan;
 import io.fabric8.kubernetes.api.model.EnvVarBuilder;
+import io.fabric8.kubernetes.api.model.ObjectMeta;
 import io.fabric8.kubernetes.api.model.PodSpecBuilder;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.api.model.batch.v1.JobBuilder;
 import io.fabric8.kubernetes.api.model.batch.v1.JobFluent;
 import io.javaoperatorsdk.operator.api.reconciler.Context;
-
-import java.util.Map;
 
 import static io.javaoperatorsdk.operator.ReconcilerUtils.loadYaml;
 
@@ -22,6 +21,14 @@ public class JobProvider implements DesiredProvider<Job, DuplicateMessageScan> {
 
     @Override
     public Job desired(DuplicateMessageScan scan, Context<DuplicateMessageScan> context) {
+        int segmentCount = scan.getSpec().buildInputs(configuration.isKillTailingSidecars()).size();
+        return jobBuilder(scan.getMetadata().getName(), scan.buildDependentObjectMetadata(),
+          scan.getSpec().getMaxParallelScans(), segmentCount,
+          scan.getSpec().getRetriesPerSegment() * segmentCount).build();
+    }
+
+    public JobBuilder jobBuilder(String scanName, ObjectMeta objectMeta, int parallelism, int segmentCount,
+                                 int backoffLimit) {
         String baseJobYaml = "/baseDependantResources/job.yaml";
         if (configuration.isUseIntegrationTestJob()) {
             baseJobYaml = "/baseDependantResources/integration-test-job.yaml";
@@ -29,20 +36,19 @@ public class JobProvider implements DesiredProvider<Job, DuplicateMessageScan> {
         Job base = loadYaml(Job.class, getClass(), baseJobYaml);
         PodSpecBuilder podSpecBuilder = new PodSpecBuilder(base.getSpec().getTemplate().getSpec());
         configureContainer(podSpecBuilder);
-        configureVolumes(scan, podSpecBuilder);
+        configureVolumes(podSpecBuilder, scanName, parallelism);
         JobFluent<JobBuilder>.SpecNested<JobBuilder> jobSpecBuilder = new JobBuilder(base)
-          .withMetadata(scan.buildDependentObjectMetadata())
+          .withMetadata(objectMeta)
           .editSpec();
         jobSpecBuilder.editTemplate().withSpec(podSpecBuilder.build()).endTemplate();
-        Map<String, Map<String, String>> inputs = scan.getSpec().buildInputs(configuration.isKillTailingSidecars());
-        if (inputs.size() > 1) {
+        if (segmentCount > 1) {
             jobSpecBuilder
-              .withCompletions(inputs.size())
+              .withCompletions(segmentCount)
               .withCompletionMode("Indexed")
-              .withParallelism(scan.getSpec().getMaxParallelScans());
+              .withParallelism(parallelism);
         }
-        jobSpecBuilder.withBackoffLimit(scan.getSpec().getRetriesPerSegment() * inputs.size());
-        return jobSpecBuilder.endSpec().build();
+        jobSpecBuilder.withBackoffLimit(backoffLimit);
+        return jobSpecBuilder.endSpec();
     }
 
     private void configureContainer(PodSpecBuilder podSpecBuilder) {
@@ -59,8 +65,7 @@ public class JobProvider implements DesiredProvider<Job, DuplicateMessageScan> {
         }
     }
 
-    private void configureVolumes(DuplicateMessageScan scan, PodSpecBuilder podSpecBuilder) {
-        String name = scan.getMetadata().getName();
+    private void configureVolumes(PodSpecBuilder podSpecBuilder, String name, int parallelism) {
         if (configuration.isUseIntegrationTestJob()) {
             podSpecBuilder.addNewVolume().withName("config").withNewConfigMap()
               .withDefaultMode(420).withName(name)
@@ -72,7 +77,7 @@ public class JobProvider implements DesiredProvider<Job, DuplicateMessageScan> {
               .addNewSource().withNewConfigMap().withName(name).endConfigMap().endSource()
               .endProjected().endVolume();
         }
-        if (scan.getSpec().getMaxParallelScans() == 1) {
+        if (parallelism == 1) {
             podSpecBuilder.addNewVolume().withName("duplicate-detector-pvc")
               .withNewPersistentVolumeClaim().withClaimName(name).endPersistentVolumeClaim()
               .endVolume();
