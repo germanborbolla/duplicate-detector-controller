@@ -33,7 +33,7 @@ public class JobProviderTests extends BaseTests {
   @DisplayName("Use the parallelism from the spec")
   void useParallelismFromSpec() {
     DuplicateMessageScanSpec spec = createMultipleCustomerSpec();
-    spec.setMaxParallelScans(3);
+    spec.maxParallelScans = 3;
     DuplicateMessageScan scan = createScan(spec);
     assertEqualsWithYaml(loadYaml(Job.class, getClass(), "/job/parallelism-3.yaml"),
       sut.desired(scan, null));
@@ -43,7 +43,7 @@ public class JobProviderTests extends BaseTests {
   @DisplayName("Generates a job that executes time range segments in parallel")
   void singleCustomerSplitTimeRange() {
     DuplicateMessageScanSpec spec = createSingleCustomerSpec();
-    spec.setTimeRangeSegmentLength("PT5m");
+    spec.timeRangeSegmentLength = "PT5m";
     assertEqualsWithYaml(loadYaml(Job.class, getClass(), "/job/single-customer-split-time-range.yaml"),
       sut.desired(createScan(spec), null));
   }

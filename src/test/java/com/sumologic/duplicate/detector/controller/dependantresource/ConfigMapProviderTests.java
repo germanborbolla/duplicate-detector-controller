@@ -34,7 +34,7 @@ public class ConfigMapProviderTests extends BaseTests {
   @DisplayName("Generates a config map using the provided target object")
   void useProvidedTargetObject() {
     DuplicateMessageScanSpec spec = createSingleCustomerSpec();
-    spec.setTargetObject("blocks");
+    spec.targetObject = "blocks";
     DuplicateMessageScan scan = createScan(spec);
     assertEqualsWithYaml(loadYaml(ConfigMap.class, getClass(), "/configmap/blocks.yaml"),
       sut.desired(scan, null));
@@ -44,7 +44,7 @@ public class ConfigMapProviderTests extends BaseTests {
   void splitTimeRange() {
     DuplicateMessageScanSpec spec = new DuplicateMessageScanSpec(
       "2023-09-06T10:00:00-07:00", "2023-09-06T10:15:00-07:00", List.of("0000000000000005"));
-    spec.setTimeRangeSegmentLength("PT5m");
+    spec.timeRangeSegmentLength = "PT5m";
     assertEqualsWithYaml(loadYaml(ConfigMap.class, getClass(),"/configmap/single-customer-split-time-range.yaml"),
       sut.desired(createScan(spec), null));
   }

@@ -1,7 +1,6 @@
 package com.sumologic.duplicate.detector.controller.customresource;
 
 import org.apache.commons.lang3.tuple.Pair;
-import org.apache.commons.lang3.tuple.Triple;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -18,22 +17,22 @@ public class DuplicateMessageScanSpecTests {
 
     assertIterableEquals(
       List.of(Pair.of("2023-09-06T10:00:00-07:00", "2023-09-06T10:15:00-07:00")),
-      spec.getScanningSegments());
+      spec.splitTimeRange());
 
-    spec.setTimeRangeSegmentLength("PT5m");
+    spec.timeRangeSegmentLength = "PT5m";
     assertIterableEquals(List.of(
       Pair.of("2023-09-06T17:00:00Z", "2023-09-06T17:05:00Z"),
       Pair.of("2023-09-06T17:05:00Z", "2023-09-06T17:10:00Z"),
       Pair.of("2023-09-06T17:10:00Z", "2023-09-06T17:15:00Z")
-      ), spec.getScanningSegments());
+      ), spec.splitTimeRange());
 
-    spec.setEndTime("2023-09-06T10:18:00-07:00");
+    spec.endTime = "2023-09-06T10:18:00-07:00";
     assertIterableEquals(List.of(
       Pair.of("2023-09-06T17:00:00Z", "2023-09-06T17:05:00Z"),
       Pair.of("2023-09-06T17:05:00Z", "2023-09-06T17:10:00Z"),
       Pair.of("2023-09-06T17:10:00Z", "2023-09-06T17:15:00Z"),
       Pair.of("2023-09-06T17:15:00Z", "2023-09-06T17:18:00Z")
-      ), spec.getScanningSegments());
+      ), spec.splitTimeRange());
   }
 
   @Test
@@ -43,26 +42,26 @@ public class DuplicateMessageScanSpecTests {
 
     assertIterableEquals(
       List.of(
-        Triple.of("0000000000000005", "2023-09-06T10:00:00-07:00", "2023-09-06T10:15:00-07:00")
-      ), spec.zipCustomerAndSegments());
+        new Segment("0000000000000005", "2023-09-06T10:00:00-07:00", "2023-09-06T10:15:00-07:00")
+      ), spec.getSegments());
 
-    spec.setCustomers(List.of("0000000000000005", "0000000000000006"));
+    spec.customers = List.of("0000000000000005", "0000000000000006");
     assertIterableEquals(
       List.of(
-        Triple.of("0000000000000005", "2023-09-06T10:00:00-07:00", "2023-09-06T10:15:00-07:00"),
-        Triple.of("0000000000000006", "2023-09-06T10:00:00-07:00", "2023-09-06T10:15:00-07:00")
-      ), spec.zipCustomerAndSegments());
+        new Segment("0000000000000005", "2023-09-06T10:00:00-07:00", "2023-09-06T10:15:00-07:00"),
+        new Segment("0000000000000006", "2023-09-06T10:00:00-07:00", "2023-09-06T10:15:00-07:00")
+      ), spec.getSegments());
 
-    spec.setTimeRangeSegmentLength("PT5m");
+    spec.timeRangeSegmentLength = "PT5m";
     assertIterableEquals(
       List.of(
-        Triple.of("0000000000000005", "2023-09-06T17:00:00Z", "2023-09-06T17:05:00Z"),
-        Triple.of("0000000000000005", "2023-09-06T17:05:00Z", "2023-09-06T17:10:00Z"),
-        Triple.of("0000000000000005", "2023-09-06T17:10:00Z", "2023-09-06T17:15:00Z"),
-        Triple.of("0000000000000006", "2023-09-06T17:00:00Z", "2023-09-06T17:05:00Z"),
-        Triple.of("0000000000000006", "2023-09-06T17:05:00Z", "2023-09-06T17:10:00Z"),
-        Triple.of("0000000000000006", "2023-09-06T17:10:00Z", "2023-09-06T17:15:00Z")
-      ), spec.zipCustomerAndSegments());
+        new Segment("0000000000000005", "2023-09-06T17:00:00Z", "2023-09-06T17:05:00Z"),
+        new Segment("0000000000000005", "2023-09-06T17:05:00Z", "2023-09-06T17:10:00Z"),
+        new Segment("0000000000000005", "2023-09-06T17:10:00Z", "2023-09-06T17:15:00Z"),
+        new Segment("0000000000000006", "2023-09-06T17:00:00Z", "2023-09-06T17:05:00Z"),
+        new Segment("0000000000000006", "2023-09-06T17:05:00Z", "2023-09-06T17:10:00Z"),
+        new Segment("0000000000000006", "2023-09-06T17:10:00Z", "2023-09-06T17:15:00Z")
+      ), spec.getSegments());
   }
 
   @Test
@@ -88,7 +87,7 @@ public class DuplicateMessageScanSpecTests {
         DuplicateMessageScanSpec.WORKING_DIR_KEY, "/usr/sumo/system-tools/duplicate-detector-state")
       ).entrySet(), spec.buildInputs(false).entrySet());
 
-    spec.setTargetObject("blocks");
+    spec.targetObject = "blocks";
     assertIterableEquals(
       Map.of("duplicate_detector.properties", Map.of(
         DuplicateMessageScanSpec.CUSTOMERS_KEY, "0000000000000005",
@@ -99,8 +98,8 @@ public class DuplicateMessageScanSpecTests {
         "duplicate_detector.onExitInvoke", "pkill fluent-bit")
       ).entrySet(), spec.buildInputs(true).entrySet());
 
-    spec.setCustomers(List.of("0000000000000005", "0000000000000006"));
-    spec.setTargetObject(null);
+    spec.customers = List.of("0000000000000005", "0000000000000006");
+    spec.targetObject = null;
     Map<String, Map<String, String>> inputs = spec.buildInputs(true);
     assertAll("first input", () -> assertTrue(inputs.containsKey("duplicate_detector-0.properties")), () -> {
       Map<String, String> input = inputs.get("duplicate_detector-0.properties");

@@ -1,5 +1,6 @@
 package com.sumologic.duplicate.detector.controller.customresource;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.fabric8.kubernetes.api.model.Namespaced;
 import io.fabric8.kubernetes.api.model.ObjectMeta;
 import io.fabric8.kubernetes.api.model.ObjectMetaBuilder;
@@ -23,6 +24,13 @@ public class DuplicateMessageScan
     this.spec = spec;
   }
 
+  @JsonIgnore
+  public DuplicateMessageScanStatus getOrCreateStatus() {
+    if (status == null) {
+      status = new DuplicateMessageScanStatus(spec.getSegments());
+    }
+    return status;
+  }
   public DuplicateMessageScan withStatus(DuplicateMessageScanStatus status) {
     this.status = status;
     return this;

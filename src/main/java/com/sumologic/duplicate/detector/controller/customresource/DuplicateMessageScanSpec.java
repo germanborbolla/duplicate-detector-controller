@@ -2,12 +2,12 @@ package com.sumologic.duplicate.detector.controller.customresource;
 
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
 import com.google.common.base.MoreObjects;
+import io.fabric8.crd.generator.annotation.PrinterColumn;
 import io.fabric8.generator.annotation.Max;
 import io.fabric8.generator.annotation.Min;
 import io.fabric8.generator.annotation.Nullable;
 import io.fabric8.generator.annotation.Required;
 import org.apache.commons.lang3.tuple.Pair;
-import org.apache.commons.lang3.tuple.Triple;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -26,15 +26,40 @@ public class DuplicateMessageScanSpec {
     Map.entry("duplicate_detector.onExitInvoke", "pkill fluent-bit");
   private static final String DEFAULT_TARGET_OBJECT = "indices";
 
-  private String startTime;
-  private String endTime;
-  private List<String> customers;
-  private String volumeSize;
-  private String targetObject;
-  private int maxParallelScans = 1;
-  private String timeRangeSegmentLength;
+  @JsonPropertyDescription("Start time for the scan, in ISO format")
+  @Required
+  @PrinterColumn(name = "START_TIME", priority = 0)
+  public String startTime;
 
-  private int retriesPerSegment = 3;
+  @JsonPropertyDescription("End time for the scan, in ISO format")
+  @Required
+  @PrinterColumn(name = "END_TIME", priority = 0)
+  public String endTime;
+
+  @JsonPropertyDescription("List of customers to scan")
+  @Required
+  public List<String> customers;
+
+  @JsonPropertyDescription("[Optional] Size of the volume to attach to the scanning jobs, defaults to '300g'")
+  @Nullable
+  public String volumeSize;
+
+  @JsonPropertyDescription("[Optional] What to scan either blocks or indices, defaults to 'indices'")
+  @Nullable
+  public String targetObject;
+
+  @JsonPropertyDescription("Max number of scans that can be performed at the same time, defaults to 1")
+  @Min(1)
+  public int maxParallelScans = 1;
+
+  @JsonPropertyDescription("Length of how long each scan should be, for example to break the full time range into 5m segments set this to PT5m")
+  @Nullable
+  public String timeRangeSegmentLength;
+
+  @JsonPropertyDescription("How many times to attempt each segment, default is 3")
+  @Min(1)
+  @Max(5)
+  public int retriesPerSegment = 3;
 
   public DuplicateMessageScanSpec() {
   }
@@ -43,87 +68,6 @@ public class DuplicateMessageScanSpec {
     this.startTime = startTime;
     this.endTime = endTime;
     this.customers = customers;
-  }
-
-  @JsonPropertyDescription("Start time for the scan, in ISO format")
-  @Required
-  public String getStartTime() {
-    return startTime;
-  }
-
-  public void setStartTime(String startTime) {
-    this.startTime = startTime;
-  }
-
-  @JsonPropertyDescription("End time for the scan, in ISO format")
-  @Required
-  public String getEndTime() {
-    return endTime;
-  }
-
-  public void setEndTime(String endTime) {
-    this.endTime = endTime;
-  }
-
-  @JsonPropertyDescription("List of customers to scan")
-  @Required
-  public List<String> getCustomers() {
-    return customers;
-  }
-
-  public void setCustomers(List<String> customers) {
-    this.customers = customers;
-  }
-
-  @JsonPropertyDescription("[Optional] Size of the volume to attach to the scanning jobs, defaults to '300g'")
-  @Nullable
-  public String getVolumeSize() {
-    return volumeSize;
-  }
-
-  public void setVolumeSize(String volumeSize) {
-    this.volumeSize = volumeSize;
-  }
-
-  @JsonPropertyDescription("[Optional] What to scan either blocks or indices, defaults to 'indices'")
-  @Nullable
-  public String getTargetObject() {
-    return targetObject;
-  }
-
-  public void setTargetObject(String targetObject) {
-    this.targetObject = targetObject;
-  }
-
-  @JsonPropertyDescription("Max number of scans that can be performed at the same time, defaults to 1")
-  @Min(1)
-  public int getMaxParallelScans() {
-    return maxParallelScans;
-  }
-
-  public void setMaxParallelScans(int maxParallelScans) {
-    this.maxParallelScans = maxParallelScans;
-  }
-
-  @JsonPropertyDescription("Length of how long each scan should be, for example to break the full time range into 5m segments set this to PT5m")
-  @Nullable
-  public String getTimeRangeSegmentLength() {
-    return timeRangeSegmentLength;
-  }
-
-  public void setTimeRangeSegmentLength(String timeRangeSegmentLength) {
-    this.timeRangeSegmentLength = timeRangeSegmentLength;
-  }
-
-  @JsonPropertyDescription("How many times to attempt each segment, valid range is 1-5, default is 3")
-  @Min(1)
-  @Max(5)
-  public int getRetriesPerSegment() {
-    return retriesPerSegment;
-  }
-
-  public void setRetriesPerSegment(int retriesPerSegment) {
-    this.retriesPerSegment = retriesPerSegment;
   }
 
   @Override
@@ -159,10 +103,10 @@ public class DuplicateMessageScanSpec {
   }
 
   public Map<String, Map<String, String>> buildInputs(boolean includeKillSidecar) {
-    List<Triple<String, String, String>> withTimeRangeSplit = zipCustomerAndSegments();
+    List<Segment> withTimeRangeSplit = getSegments();
     if (withTimeRangeSplit.size() == 1) {
       return Map.of("duplicate_detector.properties",
-        mapFor(zipCustomerAndSegments().get(0), "/usr/sumo/system-tools/duplicate-detector-state",
+        mapFor(getSegments().get(0), "/usr/sumo/system-tools/duplicate-detector-state",
           includeKillSidecar));
     } else {
       Map<String, Map<String, String>> inputs = new HashMap<>();
@@ -175,15 +119,15 @@ public class DuplicateMessageScanSpec {
     }
   }
 
-  protected List<Triple<String, String, String>> zipCustomerAndSegments() {
-    List<Pair<String, String>> scanningSegments = getScanningSegments();
+  public List<Segment> getSegments() {
+    List<Pair<String, String>> scanningSegments = splitTimeRange();
     return customers.stream()
       .flatMap(customer -> scanningSegments.stream().map(interval ->
-        Triple.ofNonNull(customer, interval.getLeft(), interval.getRight())))
+        new Segment(customer, interval.getLeft(), interval.getRight())))
       .collect(Collectors.toList());
   }
 
-  protected List<Pair<String, String>> getScanningSegments() {
+  protected List<Pair<String, String>> splitTimeRange() {
     if (timeRangeSegmentLength == null) {
       return List.of(Pair.of(startTime, endTime));
     } else {
@@ -202,15 +146,15 @@ public class DuplicateMessageScanSpec {
     }
   }
 
-  private Map<String, String> mapFor(Triple<String, String, String> customersAndTimes, String workingDir,
+  private Map<String, String> mapFor(Segment segment, String workingDir,
                                      boolean includeKillSidecar) {
     Map<String, String> map = new HashMap<>();
     if (includeKillSidecar) {
       map.put(KILL_SIDECAR_ENTRY.getKey(),KILL_SIDECAR_ENTRY.getValue());
     }
-    map.put(CUSTOMERS_KEY, customersAndTimes.getLeft());
-    map.put(START_TIME_KEY, customersAndTimes.getMiddle());
-    map.put(END_TIME_KEY, customersAndTimes.getRight());
+    map.put(CUSTOMERS_KEY, segment.customer);
+    map.put(START_TIME_KEY, segment.startTime);
+    map.put(END_TIME_KEY, segment.endTime);
     map.put(TARGET_OBJECT_KEY, Optional.ofNullable(targetObject).orElse(DEFAULT_TARGET_OBJECT));
     map.put(WORKING_DIR_KEY, workingDir);
     return map;

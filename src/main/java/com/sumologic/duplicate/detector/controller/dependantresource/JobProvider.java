@@ -21,10 +21,10 @@ public class JobProvider implements DesiredProvider<Job, DuplicateMessageScan> {
 
     @Override
     public Job desired(DuplicateMessageScan scan, Context<DuplicateMessageScan> context) {
-        int segmentCount = scan.getSpec().buildInputs(configuration.isKillTailingSidecars()).size();
+        int segmentCount = scan.getSpec().getSegments().size();
         return jobBuilder(scan.getMetadata().getName(), scan.buildDependentObjectMetadata(),
-          scan.getSpec().getMaxParallelScans(), segmentCount,
-          scan.getSpec().getRetriesPerSegment() * segmentCount).build();
+          scan.getSpec().maxParallelScans, segmentCount,
+          scan.getSpec().retriesPerSegment * segmentCount).build();
     }
 
     public JobBuilder jobBuilder(String scanName, ObjectMeta objectMeta, int parallelism, int segmentCount,

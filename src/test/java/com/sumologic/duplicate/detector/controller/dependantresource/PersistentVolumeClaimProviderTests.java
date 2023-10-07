@@ -27,7 +27,7 @@ public class PersistentVolumeClaimProviderTests extends BaseTests {
   @Test
   void testCustomSize() {
     DuplicateMessageScanSpec spec = createMultipleCustomerSpec();
-    spec.setVolumeSize("100Gi");
+    spec.volumeSize = "100Gi";
     DuplicateMessageScan scan = createScan(spec);
     assertEqualsWithYaml(loadYaml(PersistentVolumeClaim.class, getClass(), "/pvc/custom-size.yaml"),
       sut.desired(scan, null));

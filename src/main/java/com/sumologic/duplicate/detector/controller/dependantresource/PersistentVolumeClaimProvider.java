@@ -25,7 +25,7 @@ public class PersistentVolumeClaimProvider implements DesiredProvider<Persistent
           .editSpec()
           .withStorageClassName(configuration.getDefaultStorageClassName())
           .editResources().addToRequests("storage",
-            Quantity.parse(Optional.ofNullable(scan.getSpec().getVolumeSize()).orElse(configuration.getDefaultSize())))
+            Quantity.parse(Optional.ofNullable(scan.getSpec().volumeSize).orElse(configuration.getDefaultSize())))
           .endResources().endSpec()
           .build();
     }

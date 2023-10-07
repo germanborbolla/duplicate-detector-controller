@@ -1,47 +1,85 @@
 package com.sumologic.duplicate.detector.controller.customresource;
 
+import com.fasterxml.jackson.annotation.JsonPropertyDescription;
 import com.google.common.base.MoreObjects;
-import io.fabric8.kubernetes.api.model.batch.v1.JobStatus;
+import io.fabric8.crd.generator.annotation.PrinterColumn;
 import io.javaoperatorsdk.operator.api.ObservedGenerationAwareStatus;
 
+import java.util.List;
 import java.util.Objects;
 
 public class DuplicateMessageScanStatus extends ObservedGenerationAwareStatus {
 
-    private JobStatus jobStatus;
-    private String error;
+
+    @PrinterColumn(name = "SUCCESSFUL", priority = 0)
+    public boolean successful = false;
+
+    @PrinterColumn(name = "FAILED", priority = 0)
+    public boolean failed = false;
+
+    @PrinterColumn(name = "ERROR", priority = 0)
+    public String error;
+
+    @JsonPropertyDescription("Pairs of time range and customer that will be scanned independently")
+    public List<Segment> segments;
+
+    @PrinterColumn(name = "SEGMENTS", priority = 0)
+    public int segmentCount;
+    @PrinterColumn(name = "PENDING_SEGMENTS", priority = 1)
+    public int pendingSegmentCount;
+    @PrinterColumn(name = "PROCESSING_SEGMENTS", priority = 1)
+    public int processingSegmentCount;
+    @PrinterColumn(name = "COMPLETED_SEGMENTS", priority = 1)
+    public int completedSegmentCount;
+    @PrinterColumn(name = "FAILED_SEGMENTS", priority = 1)
+    public int failedSegmentCount;
 
     public DuplicateMessageScanStatus() {
     }
 
-    public DuplicateMessageScanStatus(JobStatus jobStatus) {
-        this.jobStatus = jobStatus;
+    public DuplicateMessageScanStatus(List<Segment> segments) {
+        this.segments = segments;
+        updateSegmentsCounts();
+    }
+
+    public void failed(String error) {
+        this.successful = false;
+        this.failed = true;
+        this.segments.stream().filter(Segment::isPendingOrProcessing).forEach(Segment::failed);
+        this.error = error;
+        updateSegmentsCounts();
+    }
+
+    public void completed() {
+        this.successful = true;
+        this.failed = false;
+        this.segments.stream().filter(Segment::isPendingOrProcessing).forEach(Segment::completed);
         this.error = null;
+        updateSegmentsCounts();
     }
 
-    public DuplicateMessageScanStatus(Exception e) {
-        this.jobStatus = null;
-        this.error = e.getMessage();
-    }
-
-    public DuplicateMessageScanStatus(String error) {
-        this.jobStatus = null;
-        this.error = error;
-    }
-    public String getError() {
-        return error;
-    }
-
-    public void setError(String error) {
-        this.error = error;
-    }
-
-    public JobStatus getJobStatus() {
-        return jobStatus;
-    }
-
-    public void setJobStatus(JobStatus jobStatus) {
-        this.jobStatus = jobStatus;
+    public void updateSegmentsCounts() {
+        segmentCount = segments.size();
+        pendingSegmentCount = 0;
+        processingSegmentCount = 0;
+        completedSegmentCount = 0;
+        failedSegmentCount = 0;
+        segments.forEach(s -> {
+            switch (s.status) {
+                case PENDING:
+                    pendingSegmentCount += 1;
+                    break;
+                case PROCESSING:
+                    processingSegmentCount += 1;
+                    break;
+                case COMPLETED:
+                    completedSegmentCount += 1;
+                    break;
+                case FAILED:
+                    failedSegmentCount += 1;
+                    break;
+            }
+        });
     }
 
     @Override
@@ -49,19 +87,21 @@ public class DuplicateMessageScanStatus extends ObservedGenerationAwareStatus {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         DuplicateMessageScanStatus that = (DuplicateMessageScanStatus) o;
-        return Objects.equals(jobStatus, that.jobStatus) && Objects.equals(error, that.error);
+        return successful == that.successful && failed == that.failed && Objects.equals(error, that.error) && Objects.equals(segments, that.segments);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(jobStatus, error);
+        return Objects.hash(successful, failed, error, segments);
     }
 
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-          .add("jobStatus", jobStatus)
+          .add("successful", successful)
+          .add("failed", failed)
           .add("error", error)
+          .add("segments", segments)
           .toString();
     }
 }

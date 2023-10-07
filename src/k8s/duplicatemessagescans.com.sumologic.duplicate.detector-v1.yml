@@ -13,32 +13,89 @@ spec:
     singular: duplicatemessagescan
   scope: Namespaced
   versions:
-  - name: v1
+  - additionalPrinterColumns:
+    - jsonPath: .spec.endTime
+      name: END_TIME
+      priority: 0
+      type: string
+    - jsonPath: .spec.startTime
+      name: START_TIME
+      priority: 0
+      type: string
+    - jsonPath: .status.completedSegmentCount
+      name: COMPLETED_SEGMENTS
+      priority: 1
+      type: integer
+    - jsonPath: .status.error
+      name: ERROR
+      priority: 0
+      type: string
+    - jsonPath: .status.failed
+      name: FAILED
+      priority: 0
+      type: boolean
+    - jsonPath: .status.failedSegmentCount
+      name: FAILED_SEGMENTS
+      priority: 1
+      type: integer
+    - jsonPath: .status.pendingSegmentCount
+      name: PENDING_SEGMENTS
+      priority: 1
+      type: integer
+    - jsonPath: .status.processingSegmentCount
+      name: PROCESSING_SEGMENTS
+      priority: 1
+      type: integer
+    - jsonPath: .status.segmentCount
+      name: SEGMENTS
+      priority: 0
+      type: integer
+    - jsonPath: .status.successful
+      name: SUCCESSFUL
+      priority: 0
+      type: boolean
+    name: v1
     schema:
       openAPIV3Schema:
         properties:
           spec:
             properties:
               startTime:
+                description: "Start time for the scan, in ISO format"
                 type: string
               endTime:
+                description: "End time for the scan, in ISO format"
                 type: string
               customers:
+                description: List of customers to scan
                 items:
                   type: string
                 type: array
               volumeSize:
+                description: "[Optional] Size of the volume to attach to the scanning\
+                  \ jobs, defaults to '300g'"
                 nullable: true
                 type: string
               targetObject:
+                description: "[Optional] What to scan either blocks or indices, defaults\
+                  \ to 'indices'"
                 nullable: true
                 type: string
               maxParallelScans:
+                description: "Max number of scans that can be performed at the same\
+                  \ time, defaults to 1"
                 minimum: 1.0
                 type: integer
               timeRangeSegmentLength:
+                description: "Length of how long each scan should be, for example\
+                  \ to break the full time range into 5m segments set this to PT5m"
                 nullable: true
                 type: string
+              retriesPerSegment:
+                description: "How many times to attempt each segment, default is 3"
+                maximum: 5.0
+                minimum: 1.0
+                type: integer
             required:
             - startTime
             - endTime
@@ -46,53 +103,42 @@ spec:
             type: object
           status:
             properties:
-              jobStatus:
-                properties:
-                  active:
-                    type: integer
-                  completedIndexes:
-                    type: string
-                  completionTime:
-                    type: string
-                  conditions:
-                    items:
-                      properties:
-                        lastProbeTime:
-                          type: string
-                        lastTransitionTime:
-                          type: string
-                        message:
-                          type: string
-                        reason:
-                          type: string
-                        status:
-                          type: string
-                        type:
-                          type: string
-                      type: object
-                    type: array
-                  failed:
-                    type: integer
-                  ready:
-                    type: integer
-                  startTime:
-                    type: string
-                  succeeded:
-                    type: integer
-                  uncountedTerminatedPods:
-                    properties:
-                      failed:
-                        items:
-                          type: string
-                        type: array
-                      succeeded:
-                        items:
-                          type: string
-                        type: array
-                    type: object
-                type: object
+              successful:
+                type: boolean
+              failed:
+                type: boolean
               error:
                 type: string
+              segments:
+                description: Pairs of time range and customer that will be scanned
+                  independently
+                items:
+                  properties:
+                    customer:
+                      type: string
+                    startTime:
+                      type: string
+                    endTime:
+                      type: string
+                    status:
+                      enum:
+                      - PENDING
+                      - PROCESSING
+                      - COMPLETED
+                      - FAILED
+                      type: string
+                  type: object
+                type: array
+              segmentCount:
+                type: integer
+              pendingSegmentCount:
+                type: integer
+              processingSegmentCount:
+                type: integer
+              completedSegmentCount:
+                type: integer
+              failedSegmentCount:
+                type: integer
               observedGeneration:
                 type: integer
             type: object
