@@ -76,7 +76,7 @@ public class DuplicateMessageScanReconcilerSingleTests extends DuplicateMessageS
 
   private void testReconcile(List<Segment> expectedSegments,
                                    boolean expectedSuccessful, boolean expectedFailed, String expectedError) {
-    UpdateControl<DuplicateMessageScan> control = reconciler.singleReconcile(scan, context, false);
+    UpdateControl<DuplicateMessageScan> control = reconciler.singleReconcile(scan, context);
     verifyResult(control, expectedSegments, expectedSuccessful, expectedFailed, expectedError);
   }
 

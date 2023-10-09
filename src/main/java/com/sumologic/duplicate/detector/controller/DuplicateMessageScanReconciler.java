@@ -3,10 +3,7 @@ package com.sumologic.duplicate.detector.controller;
 import com.sumologic.duplicate.detector.controller.customresource.DuplicateMessageScan;
 import com.sumologic.duplicate.detector.controller.customresource.DuplicateMessageScanStatus;
 import com.sumologic.duplicate.detector.controller.customresource.Segment;
-import com.sumologic.duplicate.detector.controller.dependantresource.ConfigMapProvider;
-import com.sumologic.duplicate.detector.controller.dependantresource.JobProvider;
-import com.sumologic.duplicate.detector.controller.dependantresource.PersistentVolumeClaimProvider;
-import com.sumologic.duplicate.detector.controller.dependantresource.ProviderKubernetesDependentResource;
+import com.sumologic.duplicate.detector.controller.dependantresource.*;
 import io.fabric8.kubernetes.api.model.ConfigMap;
 import io.fabric8.kubernetes.api.model.PersistentVolumeClaim;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
@@ -20,6 +17,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Map;
+import java.util.Optional;
 
 @ControllerConfiguration
 public class DuplicateMessageScanReconciler implements Reconciler<DuplicateMessageScan>, ErrorStatusHandler<DuplicateMessageScan>, EventSourceInitializer<DuplicateMessageScan> {
@@ -27,6 +25,7 @@ public class DuplicateMessageScanReconciler implements Reconciler<DuplicateMessa
   private final KubernetesDependentResource<ConfigMap, DuplicateMessageScan> configMapDependentResource;
   private final KubernetesDependentResource<PersistentVolumeClaim, DuplicateMessageScan> pvcDependentResource;
   private final KubernetesDependentResource<Job, DuplicateMessageScan> jobDependentResource;
+  private final KubernetesDependentResource<Job, DuplicateMessageScan> bulkJobDependentResource;
   private final Workflow<DuplicateMessageScan> nonParallelWorkflow;
   private final Workflow<DuplicateMessageScan> parallelWorkflow;
 
@@ -35,8 +34,9 @@ public class DuplicateMessageScanReconciler implements Reconciler<DuplicateMessa
       new ConfigMapProvider(), client);
     pvcDependentResource = ProviderKubernetesDependentResource.create(PersistentVolumeClaim.class,
       new PersistentVolumeClaimProvider(reconcilerConfiguration.persistentVolumeConfiguration), client);
-    jobDependentResource = ProviderKubernetesDependentResource.create(Job.class,
-      new JobProvider(reconcilerConfiguration.jobConfiguration), client);
+    JobProvider jobProvider = new JobProvider(reconcilerConfiguration.jobConfiguration);
+    jobDependentResource = ProviderKubernetesDependentResource.create(Job.class, jobProvider, client);
+    bulkJobDependentResource = JobPerSegmentDependentResource.create(jobProvider, client);
 
     nonParallelWorkflow = new WorkflowBuilder<DuplicateMessageScan>()
       .addDependentResource(configMapDependentResource)
@@ -46,19 +46,24 @@ public class DuplicateMessageScanReconciler implements Reconciler<DuplicateMessa
 
     parallelWorkflow = new WorkflowBuilder<DuplicateMessageScan>()
       .addDependentResource(configMapDependentResource)
-      .addDependentResource(jobDependentResource).dependsOn(configMapDependentResource)
+      .addDependentResource(bulkJobDependentResource).dependsOn(configMapDependentResource)
       .build();
   }
 
   @Override
   public UpdateControl<DuplicateMessageScan> reconcile(DuplicateMessageScan scan,
                                                        Context<DuplicateMessageScan> context) {
-    logger.info("Reconciling scan {}", scan);
+    UpdateControl<DuplicateMessageScan> control;
     if (scan.getSpec().getSegments().size() == 1) {
-      return singleReconcile(scan, context, true);
+      nonParallelWorkflow.reconcile(scan, context);
+      control = singleReconcile(scan, context);
     } else {
-      return multipleReconcile(scan, context, true);
+      DuplicateMessageScanStatus updatedStatus = calculateStatus(scan, context);
+      parallelWorkflow.reconcile(scan, context);
+      control = UpdateControl.patchStatus(scan.withStatus(updatedStatus));
     }
+    logger.debug("Reconciled scan {} with control {}", scan, control);
+    return control;
   }
 
   @Override
@@ -77,32 +82,54 @@ public class DuplicateMessageScanReconciler implements Reconciler<DuplicateMessa
   }
 
   UpdateControl<DuplicateMessageScan> singleReconcile(DuplicateMessageScan scan,
-                                                      Context<DuplicateMessageScan> context,
-                                                      boolean invokeWorkflow) {
-    if (invokeWorkflow) {
-      nonParallelWorkflow.reconcile(scan, context);
-    }
+                                                      Context<DuplicateMessageScan> context) {
     DuplicateMessageScanStatus status = scan.getOrCreateStatus();
     context.getSecondaryResource(Job.class).ifPresent(job -> {
-      if (job.getStatus() != null && job.getStatus().getSucceeded() != null && job.getStatus().getSucceeded() == 1) {
+      if (hasJobSucceeded(job)) {
         status.completed();
-      } else if (job.getStatus() != null && job.getStatus().getFailed() != null && job.getStatus().getFailed() == 1) {
+      } else if (hasJobFailed(job)) {
         status.failed("All attempts to execute scan failed");
       } else {
         status.segments.forEach(Segment::processing);
-        status.updateSegmentsCounts();
       }
     });
     return UpdateControl.patchStatus(scan.withStatus(status));
   }
 
-  UpdateControl<DuplicateMessageScan> multipleReconcile(DuplicateMessageScan scan,
-                                                        Context<DuplicateMessageScan> context,
-                                                        boolean invokeWorkflow) {
-    if (invokeWorkflow) {
-      parallelWorkflow.reconcile(scan, context);
+  DuplicateMessageScanStatus calculateStatus(DuplicateMessageScan scan,
+                                             Context<DuplicateMessageScan> context) {
+    DuplicateMessageScanStatus status = scan.getOrCreateStatus();
+    context.getSecondaryResources(Job.class).forEach(job -> Optional.ofNullable(job.getMetadata().getLabels())
+      .flatMap(labels -> Optional.ofNullable(labels.get(Constants.JOB_SEGMENT_LABEL_KEY))
+        .map(Integer::parseInt)).ifPresent(index -> {
+          Segment segment = status.segments.get(index);
+          if (hasJobSucceeded(job)) {
+            segment.completed();
+          } else if (hasJobFailed(job)) {
+            segment.failed();
+          } else {
+            segment.processing();
+          }
+      })
+    );
+    if (status.segments.stream().allMatch(Segment::isFinished)) {
+      if (status.segments.stream().anyMatch(s -> s.status == Segment.SegmentStatus.FAILED)) {
+        status.failed("One or more jobs failed");
+      } else {
+        status.completed();
+      }
     }
-    return UpdateControl.patchStatus(scan.withStatus(scan.getOrCreateStatus()));
-
+    status.updateSegmentsCounts();
+    return status;
   }
+
+  private boolean hasJobSucceeded(Job job) {
+    return job.getStatus() != null && job.getStatus().getSucceeded() != null && job.getStatus().getSucceeded() == 1;
+  }
+
+  private boolean hasJobFailed(Job job) {
+    return job.getStatus() != null && job.getStatus().getFailed() != null && job.getStatus().getFailed() == 1;
+  }
+
+
 }

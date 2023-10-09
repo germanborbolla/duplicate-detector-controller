@@ -19,8 +19,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertWith;
@@ -105,26 +105,41 @@ public class ReconcilerTests {
   }
 
   @Test
-  @DisplayName("Not create a volume if parallelism is greater than one")
-  @Disabled("While I rework parallel logic")
+  @DisplayName("schedule multiple jobs for parallel scans")
   void noVolumeWhenParallelGreaterThanOne() {
     String name = "test-scan";
-    spec.maxParallelScans = 2;
+    spec.customers = List.of("0000000000000475", "0000000000000476");
     createScan(name);
+    Map<String, Job> jobs = new HashMap<>();
+    Map<String, List<Watcher.Action>> actionsPerJob = new HashMap<>();
+    operator.getKubernetesClient().resources(Job.class).inNamespace(operator.getNamespace()).watch(new Watcher<>() {
+      @Override
+      public void eventReceived(Action action, Job resource) {
+        String key = resource.getMetadata().getLabels().get(Constants.JOB_SEGMENT_LABEL_KEY);
+        jobs.put(key, resource);
+        actionsPerJob.computeIfAbsent(key, k -> new LinkedList<>()).add(action);
+      }
+
+      @Override
+      public void onClose(WatcherException cause) {
+
+      }
+    });
     await()
       .atMost(Duration.ofMinutes(1))
       .pollInterval(Duration.ofSeconds(1)).untilAsserted(() -> {
         PersistentVolumeClaim pvc = operator.get(PersistentVolumeClaim.class, name);
         assertThat(pvc).isNull();
 
-        Job job = operator.get(Job.class, name);
-        assertThat(job).isNotNull();
-        assertThat(job.getStatus().getSucceeded()).isEqualTo(2);
-        assertThat(job.getStatus().getCompletionTime()).isNotNull();
-
         assertScanIsComplete(name);
       });
+
+    assertThat(jobs).hasSize(spec.getSegments().size());
+    assertThat(jobs.keySet()).containsAll(spec.getSegments().stream().map(s -> s.id).collect(Collectors.toList()));
+    assertThat(jobs.values()).allMatch(job -> job.getStatus().getSucceeded() == 1);
+    spec.getSegments().forEach(s -> assertThat(actionsPerJob.get(s.id)).withFailMessage(String.format("Job %s was not deleted", s.id)).contains(Watcher.Action.DELETED));
   }
+
   private void assertScanIsComplete(String name) {
     DuplicateMessageScan scan = operator.get(DuplicateMessageScan.class, name);
     List<Segment> expectedSegments = scan.getSpec().getSegments();

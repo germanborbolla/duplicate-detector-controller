@@ -24,11 +24,11 @@ public class JobProvider implements DesiredProvider<Job, DuplicateMessageScan> {
         int segmentCount = scan.getSpec().getSegments().size();
         return jobBuilder(scan.getMetadata().getName(), scan.buildDependentObjectMetadata(),
           scan.getSpec().maxParallelScans, segmentCount,
-          scan.getSpec().retriesPerSegment * segmentCount).build();
+          scan.getSpec().retriesPerSegment * segmentCount, scan.getSpec().maxParallelScans == 1).build();
     }
 
     public JobBuilder jobBuilder(String scanName, ObjectMeta objectMeta, int parallelism, int segmentCount,
-                                 int backoffLimit) {
+                                 int backoffLimit, boolean usePVC) {
         String baseJobYaml = "/baseDependantResources/job.yaml";
         if (configuration.isUseIntegrationTestJob()) {
             baseJobYaml = "/baseDependantResources/integration-test-job.yaml";
@@ -36,7 +36,7 @@ public class JobProvider implements DesiredProvider<Job, DuplicateMessageScan> {
         Job base = loadYaml(Job.class, getClass(), baseJobYaml);
         PodSpecBuilder podSpecBuilder = new PodSpecBuilder(base.getSpec().getTemplate().getSpec());
         configureContainer(podSpecBuilder);
-        configureVolumes(podSpecBuilder, scanName, parallelism);
+        configureVolumes(podSpecBuilder, scanName, usePVC);
         JobFluent<JobBuilder>.SpecNested<JobBuilder> jobSpecBuilder = new JobBuilder(base)
           .withMetadata(objectMeta)
           .editSpec();
@@ -65,7 +65,7 @@ public class JobProvider implements DesiredProvider<Job, DuplicateMessageScan> {
         }
     }
 
-    private void configureVolumes(PodSpecBuilder podSpecBuilder, String name, int parallelism) {
+    private void configureVolumes(PodSpecBuilder podSpecBuilder, String name, boolean usePVC) {
         if (configuration.isUseIntegrationTestJob()) {
             podSpecBuilder.addNewVolume().withName("config").withNewConfigMap()
               .withDefaultMode(420).withName(name)
@@ -77,7 +77,7 @@ public class JobProvider implements DesiredProvider<Job, DuplicateMessageScan> {
               .addNewSource().withNewConfigMap().withName(name).endConfigMap().endSource()
               .endProjected().endVolume();
         }
-        if (parallelism == 1) {
+        if (usePVC) {
             podSpecBuilder.addNewVolume().withName("duplicate-detector-pvc")
               .withNewPersistentVolumeClaim().withClaimName(name).endPersistentVolumeClaim()
               .endVolume();

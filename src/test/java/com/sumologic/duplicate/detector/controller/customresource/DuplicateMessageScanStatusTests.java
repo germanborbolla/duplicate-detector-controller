@@ -102,8 +102,8 @@ public class DuplicateMessageScanStatusTests {
   }
 
   List<Segment> createSegments() {
-    return List.of(new Segment("0000000000000005", "2023-09-06T10:00:00-07:00", "2023-09-06T10:15:00-07:00"),
-      new Segment("0000000000000006", "2023-09-06T10:00:00-07:00", "2023-09-06T10:15:00-07:00"));
+    return List.of(new Segment("0", "0000000000000005", "2023-09-06T10:00:00-07:00", "2023-09-06T10:15:00-07:00"),
+      new Segment("1", "0000000000000006", "2023-09-06T10:00:00-07:00", "2023-09-06T10:15:00-07:00"));
   }
 
   void reset(DuplicateMessageScanStatus status) {

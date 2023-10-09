@@ -6,7 +6,6 @@ import com.sumologic.duplicate.detector.controller.customresource.Segment;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.javaoperatorsdk.operator.api.reconciler.Context;
 import io.javaoperatorsdk.operator.api.reconciler.UpdateControl;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -38,7 +37,12 @@ public abstract class DuplicateMessageScanReconcilerTestBase {
 
   protected void verifyResult(UpdateControl<DuplicateMessageScan> control, List<Segment> expectedSegments,
                             boolean expectedSuccessful, boolean expectedFailed, String expectedError) {
-    DuplicateMessageScanStatus status = control.getResource().getStatus();
+    verifyResult(control.getResource().getStatus(), expectedSegments, expectedSuccessful, expectedFailed,
+      expectedError);
+  }
+
+  protected void verifyResult(DuplicateMessageScanStatus status, List<Segment> expectedSegments,
+                            boolean expectedSuccessful, boolean expectedFailed, String expectedError) {
     assertNotNull(status);
     assertEquals(expectedSegments.size(), status.segmentCount);
     assertEquals(expectedSegments, status.segments);

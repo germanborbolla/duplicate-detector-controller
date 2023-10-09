@@ -33,6 +33,7 @@ public class DuplicateMessageScan
   }
   public DuplicateMessageScan withStatus(DuplicateMessageScanStatus status) {
     this.status = status;
+    status.updateSegmentsCounts();
     return this;
   }
 

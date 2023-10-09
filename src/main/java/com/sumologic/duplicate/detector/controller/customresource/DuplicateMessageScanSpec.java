@@ -13,6 +13,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 public class DuplicateMessageScanSpec {
@@ -121,9 +122,10 @@ public class DuplicateMessageScanSpec {
 
   public List<Segment> getSegments() {
     List<Pair<String, String>> scanningSegments = splitTimeRange();
+    AtomicInteger id = new AtomicInteger();
     return customers.stream()
       .flatMap(customer -> scanningSegments.stream().map(interval ->
-        new Segment(customer, interval.getLeft(), interval.getRight())))
+        new Segment(String.valueOf(id.getAndIncrement()), customer, interval.getLeft(), interval.getRight())))
       .collect(Collectors.toList());
   }
 
