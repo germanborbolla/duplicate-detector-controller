@@ -105,19 +105,13 @@ public class DuplicateMessageScanSpec {
 
   public Map<String, Map<String, String>> buildInputs(boolean includeKillSidecar) {
     List<Segment> withTimeRangeSplit = getSegments();
-    if (withTimeRangeSplit.size() == 1) {
-      return Map.of("duplicate_detector.properties",
-        mapFor(getSegments().get(0), "/usr/sumo/system-tools/duplicate-detector-state",
-          includeKillSidecar));
-    } else {
-      Map<String, Map<String, String>> inputs = new HashMap<>();
-      for (int i = 0; i < withTimeRangeSplit.size(); i++) {
-        inputs.put(String.format("duplicate_detector-%1d.properties", i),
-          mapFor(withTimeRangeSplit.get(i),
-            String.format("/usr/sumo/system-tools/duplicate-detector-state-%1d", i), includeKillSidecar));
-      }
-      return inputs;
+    Map<String, Map<String, String>> inputs = new HashMap<>();
+    for (int i = 0; i < withTimeRangeSplit.size(); i++) {
+      inputs.put(String.format("duplicate_detector-%1d.properties", i),
+        mapFor(withTimeRangeSplit.get(i),
+          String.format("/usr/sumo/system-tools/duplicate-detector-state-%1d", i), includeKillSidecar));
     }
+    return inputs;
   }
 
   public List<Segment> getSegments() {

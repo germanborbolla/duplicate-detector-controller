@@ -9,7 +9,6 @@ import io.fabric8.kubernetes.api.model.ObjectMeta;
 import io.fabric8.kubernetes.api.model.ObjectMetaBuilder;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.api.model.batch.v1.JobBuilder;
-import io.fabric8.kubernetes.api.model.batch.v1.JobStatusBuilder;
 import io.javaoperatorsdk.operator.api.reconciler.Context;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -27,14 +26,15 @@ import static org.mockito.Mockito.when;
 import static org.junit.jupiter.api.Assertions.*;
 
 @ExtendWith(MockitoExtension.class)
-public class JobPerSegmentDependentResourceTests extends BaseTests {
+public class JobDependentResourceTests extends BaseTests {
 
-  private JobProvider jobProvider = new JobProvider(new ReconcilerConfiguration.JobConfiguration(
-    "system-tools:123", false, 5, true));
+  private ReconcilerConfiguration.JobConfiguration configuration = new ReconcilerConfiguration.JobConfiguration(
+    "system-tools:123", false, 5, true);
+
   @Mock
   private Context<DuplicateMessageScan> context;
 
-  private JobPerSegmentDependentResource resource;
+  private JobDependentResource resource;
 
   private DuplicateMessageScanSpec spec = new DuplicateMessageScanSpec("2023-09-06T10:00:00-07:00",
     "2023-09-06T10:15:00-07:00", List.of("0000000000000005", "0000000000000006"));
@@ -118,10 +118,23 @@ public class JobPerSegmentDependentResourceTests extends BaseTests {
 
       verifyJobs(Map.of(), resource.desiredResources(scan, context));
     }
+
+    @Test
+    void handleSingleSegmentScans() {
+      spec.customers = List.of("0000000000000005");
+      verifyJobs(Map.of("0", jobForSegment("0", "/job/single-customer.yaml")),
+        resource.desiredResources(scan, context));
+
+      DuplicateMessageScanStatus status = new DuplicateMessageScanStatus(spec.getSegments());
+      scan.setStatus(status);
+      status.completed();
+
+      verifyJobs(Map.of(), resource.desiredResources(scan, context));
+    }
   }
   @BeforeEach
   void beforeEach() {
-    resource = new JobPerSegmentDependentResource(jobProvider);
+    resource = new JobDependentResource(configuration);
 
     scan = new DuplicateMessageScan(spec);
     scan.setMetadata(objectMeta);
@@ -143,7 +156,11 @@ public class JobPerSegmentDependentResourceTests extends BaseTests {
     return Map.entry(String.valueOf(index), jobForSegment(index));
   }
   private Job jobForSegment(String segmentIndex) {
-    Job baseExpectedJob = loadYaml(Job.class, getClass(), "/job/multiple-segments-base-job.yaml");
+    return jobForSegment(segmentIndex, "/job/multiple-segments-base-job.yaml");
+  }
+
+  private Job jobForSegment(String segmentIndex, String baseJobYAML) {
+    Job baseExpectedJob = loadYaml(Job.class, getClass(), baseJobYAML);
     return new JobBuilder(baseExpectedJob)
       .withMetadata(new ObjectMetaBuilder(baseExpectedJob.getMetadata())
         .withName(String.format("test-%1s", segmentIndex))

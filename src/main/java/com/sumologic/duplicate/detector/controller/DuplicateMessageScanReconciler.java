@@ -25,7 +25,6 @@ public class DuplicateMessageScanReconciler implements Reconciler<DuplicateMessa
   private final KubernetesDependentResource<ConfigMap, DuplicateMessageScan> configMapDependentResource;
   private final KubernetesDependentResource<PersistentVolumeClaim, DuplicateMessageScan> pvcDependentResource;
   private final KubernetesDependentResource<Job, DuplicateMessageScan> jobDependentResource;
-  private final KubernetesDependentResource<Job, DuplicateMessageScan> bulkJobDependentResource;
   private final Workflow<DuplicateMessageScan> nonParallelWorkflow;
   private final Workflow<DuplicateMessageScan> parallelWorkflow;
 
@@ -34,9 +33,7 @@ public class DuplicateMessageScanReconciler implements Reconciler<DuplicateMessa
       new ConfigMapProvider(), client);
     pvcDependentResource = ProviderKubernetesDependentResource.create(PersistentVolumeClaim.class,
       new PersistentVolumeClaimProvider(reconcilerConfiguration.persistentVolumeConfiguration), client);
-    JobProvider jobProvider = new JobProvider(reconcilerConfiguration.jobConfiguration);
-    jobDependentResource = ProviderKubernetesDependentResource.create(Job.class, jobProvider, client);
-    bulkJobDependentResource = JobPerSegmentDependentResource.create(jobProvider, client);
+    jobDependentResource = JobDependentResource.create(reconcilerConfiguration.jobConfiguration, client);
 
     nonParallelWorkflow = new WorkflowBuilder<DuplicateMessageScan>()
       .addDependentResource(configMapDependentResource)
@@ -46,7 +43,7 @@ public class DuplicateMessageScanReconciler implements Reconciler<DuplicateMessa
 
     parallelWorkflow = new WorkflowBuilder<DuplicateMessageScan>()
       .addDependentResource(configMapDependentResource)
-      .addDependentResource(bulkJobDependentResource).dependsOn(configMapDependentResource)
+      .addDependentResource(jobDependentResource).dependsOn(configMapDependentResource)
       .build();
   }
 
@@ -54,14 +51,13 @@ public class DuplicateMessageScanReconciler implements Reconciler<DuplicateMessa
   public UpdateControl<DuplicateMessageScan> reconcile(DuplicateMessageScan scan,
                                                        Context<DuplicateMessageScan> context) {
     UpdateControl<DuplicateMessageScan> control;
+    DuplicateMessageScanStatus updatedStatus = calculateStatus(scan, context);
     if (scan.getSpec().getSegments().size() == 1) {
       nonParallelWorkflow.reconcile(scan, context);
-      control = singleReconcile(scan, context);
     } else {
-      DuplicateMessageScanStatus updatedStatus = calculateStatus(scan, context);
       parallelWorkflow.reconcile(scan, context);
-      control = UpdateControl.patchStatus(scan.withStatus(updatedStatus));
     }
+    control = UpdateControl.patchStatus(scan.withStatus(updatedStatus));
     logger.debug("Reconciled scan {} with control {}", scan, control);
     return control;
   }

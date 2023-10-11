@@ -70,31 +70,31 @@ public class DuplicateMessageScanSpecTests {
       "2023-09-06T10:15:00-07:00", List.of("0000000000000005"));
 
     assertIterableEquals(
-      Map.of("duplicate_detector.properties", Map.of(
+      Map.of("duplicate_detector-0.properties", Map.of(
         DuplicateMessageScanSpec.CUSTOMERS_KEY, "0000000000000005",
         DuplicateMessageScanSpec.START_TIME_KEY, "2023-09-06T10:00:00-07:00",
         DuplicateMessageScanSpec.END_TIME_KEY, "2023-09-06T10:15:00-07:00",
         DuplicateMessageScanSpec.TARGET_OBJECT_KEY, "indices",
-        DuplicateMessageScanSpec.WORKING_DIR_KEY, "/usr/sumo/system-tools/duplicate-detector-state",
+        DuplicateMessageScanSpec.WORKING_DIR_KEY, "/usr/sumo/system-tools/duplicate-detector-state-0",
         "duplicate_detector.onExitInvoke", "pkill fluent-bit")
       ).entrySet(), spec.buildInputs(true).entrySet());
     assertIterableEquals(
-      Map.of("duplicate_detector.properties", Map.of(
+      Map.of("duplicate_detector-0.properties", Map.of(
         DuplicateMessageScanSpec.CUSTOMERS_KEY, "0000000000000005",
         DuplicateMessageScanSpec.START_TIME_KEY, "2023-09-06T10:00:00-07:00",
         DuplicateMessageScanSpec.END_TIME_KEY, "2023-09-06T10:15:00-07:00",
         DuplicateMessageScanSpec.TARGET_OBJECT_KEY, "indices",
-        DuplicateMessageScanSpec.WORKING_DIR_KEY, "/usr/sumo/system-tools/duplicate-detector-state")
+        DuplicateMessageScanSpec.WORKING_DIR_KEY, "/usr/sumo/system-tools/duplicate-detector-state-0")
       ).entrySet(), spec.buildInputs(false).entrySet());
 
     spec.targetObject = "blocks";
     assertIterableEquals(
-      Map.of("duplicate_detector.properties", Map.of(
+      Map.of("duplicate_detector-0.properties", Map.of(
         DuplicateMessageScanSpec.CUSTOMERS_KEY, "0000000000000005",
         DuplicateMessageScanSpec.START_TIME_KEY, "2023-09-06T10:00:00-07:00",
         DuplicateMessageScanSpec.END_TIME_KEY, "2023-09-06T10:15:00-07:00",
         DuplicateMessageScanSpec.TARGET_OBJECT_KEY, "blocks",
-        DuplicateMessageScanSpec.WORKING_DIR_KEY, "/usr/sumo/system-tools/duplicate-detector-state",
+        DuplicateMessageScanSpec.WORKING_DIR_KEY, "/usr/sumo/system-tools/duplicate-detector-state-0",
         "duplicate_detector.onExitInvoke", "pkill fluent-bit")
       ).entrySet(), spec.buildInputs(true).entrySet());
 

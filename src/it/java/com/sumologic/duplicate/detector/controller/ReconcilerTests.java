@@ -13,13 +13,15 @@ import io.fabric8.kubernetes.client.Watcher;
 import io.fabric8.kubernetes.client.WatcherException;
 import io.javaoperatorsdk.operator.junit.AbstractOperatorExtension;
 import io.javaoperatorsdk.operator.junit.LocallyRunOperatorExtension;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.time.Duration;
-import java.util.*;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -50,6 +52,8 @@ public class ReconcilerTests {
     String name = "test-scan";
     createScan(name);
 
+    JobWatcher watcher = new JobWatcher();
+    operator.getKubernetesClient().resources(Job.class).inNamespace(operator.getNamespace()).watch(watcher);
     await()
       .atMost(Duration.ofMinutes(1))
       .pollInterval(Duration.ofSeconds(1))
@@ -63,12 +67,13 @@ public class ReconcilerTests {
           PersistentVolumeClaim pvc = operator.get(PersistentVolumeClaim.class, name);
           assertThat(pvc).isNotNull();
 
-          Job job = operator.get(Job.class, name);
+          assertScanIsComplete(name);
+
+          Job job = watcher.jobs.get("0");
           assertThat(job).isNotNull();
           assertThat(job.getStatus().getSucceeded()).isEqualTo(1);
           assertThat(job.getStatus().getCompletionTime()).isNotNull();
-
-          assertScanIsComplete(name);
+          assertThat(watcher.actionsPerJob.get("0")).contains(Watcher.Action.DELETED);
         });
   }
 
@@ -78,20 +83,8 @@ public class ReconcilerTests {
     String name = "test-scan";
     createScan(name);
 
-    List<Job> jobs = new ArrayList<>(1);
-    operator.getKubernetesClient().resources(Job.class).inNamespace(operator.getNamespace()).watch(new Watcher<>() {
-      @Override
-      public void eventReceived(Action action, Job resource) {
-        if (action.equals(Action.ADDED)) {
-          jobs.add(resource);
-        }
-      }
-
-      @Override
-      public void onClose(WatcherException cause) {
-
-      }
-    });
+    JobWatcher watcher = new JobWatcher();
+    operator.getKubernetesClient().resources(Job.class).inNamespace(operator.getNamespace()).watch(watcher);
     await()
       .atMost(Duration.ofMinutes(1))
       .pollInterval(Duration.ofSeconds(1))
@@ -101,7 +94,7 @@ public class ReconcilerTests {
       .during(Duration.ofSeconds(15))
       .atMost(Duration.ofSeconds(30))
       .pollInterval(Duration.ofSeconds(1))
-      .until(jobs::size, size -> size == 1);
+      .until(watcher.jobs::size, size -> size == 1);
   }
 
   @Test
@@ -110,21 +103,8 @@ public class ReconcilerTests {
     String name = "test-scan";
     spec.customers = List.of("0000000000000475", "0000000000000476");
     createScan(name);
-    Map<String, Job> jobs = new HashMap<>();
-    Map<String, List<Watcher.Action>> actionsPerJob = new HashMap<>();
-    operator.getKubernetesClient().resources(Job.class).inNamespace(operator.getNamespace()).watch(new Watcher<>() {
-      @Override
-      public void eventReceived(Action action, Job resource) {
-        String key = resource.getMetadata().getLabels().get(Constants.JOB_SEGMENT_LABEL_KEY);
-        jobs.put(key, resource);
-        actionsPerJob.computeIfAbsent(key, k -> new LinkedList<>()).add(action);
-      }
-
-      @Override
-      public void onClose(WatcherException cause) {
-
-      }
-    });
+    JobWatcher watcher = new JobWatcher();
+    operator.getKubernetesClient().resources(Job.class).inNamespace(operator.getNamespace()).watch(watcher);
     await()
       .atMost(Duration.ofMinutes(1))
       .pollInterval(Duration.ofSeconds(1)).untilAsserted(() -> {
@@ -132,12 +112,13 @@ public class ReconcilerTests {
         assertThat(pvc).isNull();
 
         assertScanIsComplete(name);
+
+        assertThat(watcher.jobs).hasSize(spec.getSegments().size());
+        assertThat(watcher.jobs.keySet()).containsAll(spec.getSegments().stream().map(s -> s.id).collect(Collectors.toList()));
+        assertThat(watcher.jobs.values()).allMatch(job -> job.getStatus().getSucceeded() == 1);
+        spec.getSegments().forEach(s -> assertThat(watcher.actionsPerJob.get(s.id)).withFailMessage(String.format("Job %s was not deleted", s.id)).contains(Watcher.Action.DELETED));
       });
 
-    assertThat(jobs).hasSize(spec.getSegments().size());
-    assertThat(jobs.keySet()).containsAll(spec.getSegments().stream().map(s -> s.id).collect(Collectors.toList()));
-    assertThat(jobs.values()).allMatch(job -> job.getStatus().getSucceeded() == 1);
-    spec.getSegments().forEach(s -> assertThat(actionsPerJob.get(s.id)).withFailMessage(String.format("Job %s was not deleted", s.id)).contains(Watcher.Action.DELETED));
   }
 
   private void assertScanIsComplete(String name) {
@@ -159,5 +140,21 @@ public class ReconcilerTests {
     scan.setMetadata(new ObjectMetaBuilder().withName(name).withNamespace(operator.getNamespace())
       .build());
     operator.create(scan);
+  }
+
+  class JobWatcher implements Watcher<Job> {
+    Map<String, Job> jobs = new HashMap<>();
+    Map<String, List<Watcher.Action>> actionsPerJob = new HashMap<>();
+    @Override
+    public void eventReceived(Action action, Job resource) {
+      String key = resource.getMetadata().getLabels().get(Constants.JOB_SEGMENT_LABEL_KEY);
+      jobs.put(key, resource);
+      actionsPerJob.computeIfAbsent(key, k -> new LinkedList<>()).add(action);
+    }
+
+    @Override
+    public void onClose(WatcherException cause) {
+
+    }
   }
 }
