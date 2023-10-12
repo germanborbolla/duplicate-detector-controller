@@ -114,6 +114,8 @@ spec:
                   independently
                 items:
                   properties:
+                    id:
+                      type: string
                     customer:
                       type: string
                     startTime:
