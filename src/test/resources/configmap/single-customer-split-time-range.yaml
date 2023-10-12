@@ -11,18 +11,18 @@ data:
   duplicate_detector-2.properties: |
     duplicate_detector.customers=0000000000000005
     duplicate_detector.endTime=2023-09-06T17:15:00Z
-    duplicate_detector.parentWorkingDir=/usr/sumo/system-tools/duplicate-detector-state-2
+    duplicate_detector.parentWorkingDir=/usr/sumo/system-tools/duplicate-detector-state
     duplicate_detector.startTime=2023-09-06T17:10:00Z
     duplicate_detector.targetObject=indices
   duplicate_detector-1.properties: |
     duplicate_detector.customers=0000000000000005
     duplicate_detector.endTime=2023-09-06T17:10:00Z
-    duplicate_detector.parentWorkingDir=/usr/sumo/system-tools/duplicate-detector-state-1
+    duplicate_detector.parentWorkingDir=/usr/sumo/system-tools/duplicate-detector-state
     duplicate_detector.startTime=2023-09-06T17:05:00Z
     duplicate_detector.targetObject=indices
   duplicate_detector-0.properties: |
     duplicate_detector.customers=0000000000000005
     duplicate_detector.endTime=2023-09-06T17:05:00Z
-    duplicate_detector.parentWorkingDir=/usr/sumo/system-tools/duplicate-detector-state-0
+    duplicate_detector.parentWorkingDir=/usr/sumo/system-tools/duplicate-detector-state
     duplicate_detector.startTime=2023-09-06T17:00:00Z
     duplicate_detector.targetObject=indices

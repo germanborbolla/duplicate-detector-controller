@@ -25,6 +25,7 @@ public class DuplicateMessageScanSpec {
 
   private static final String DEFAULT_TARGET_OBJECT = "indices";
 
+  private static final String WORKING_DIR = "/usr/sumo/system-tools/duplicate-detector-state";
   @JsonPropertyDescription("Start time for the scan, in ISO format")
   @Required
   @PrinterColumn(name = "START_TIME", priority = 0)
@@ -106,8 +107,7 @@ public class DuplicateMessageScanSpec {
     Map<String, Map<String, String>> inputs = new HashMap<>();
     for (int i = 0; i < withTimeRangeSplit.size(); i++) {
       inputs.put(String.format("duplicate_detector-%1d.properties", i),
-        mapFor(withTimeRangeSplit.get(i),
-          String.format("/usr/sumo/system-tools/duplicate-detector-state-%1d", i)));
+        mapFor(withTimeRangeSplit.get(i)));
     }
     return inputs;
   }
@@ -140,13 +140,13 @@ public class DuplicateMessageScanSpec {
     }
   }
 
-  private Map<String, String> mapFor(Segment segment, String workingDir) {
+  private Map<String, String> mapFor(Segment segment) {
     Map<String, String> map = new HashMap<>();
     map.put(CUSTOMERS_KEY, segment.customer);
     map.put(START_TIME_KEY, segment.startTime);
     map.put(END_TIME_KEY, segment.endTime);
     map.put(TARGET_OBJECT_KEY, Optional.ofNullable(targetObject).orElse(DEFAULT_TARGET_OBJECT));
-    map.put(WORKING_DIR_KEY, workingDir);
+    map.put(WORKING_DIR_KEY, WORKING_DIR);
     return map;
   }
 }

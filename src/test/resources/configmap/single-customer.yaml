@@ -11,6 +11,6 @@ data:
   duplicate_detector-0.properties: |
     duplicate_detector.customers=0000000000000005
     duplicate_detector.endTime=2023-09-06T10:15:00-07:00
-    duplicate_detector.parentWorkingDir=/usr/sumo/system-tools/duplicate-detector-state-0
+    duplicate_detector.parentWorkingDir=/usr/sumo/system-tools/duplicate-detector-state
     duplicate_detector.startTime=2023-09-06T10:00:00-07:00
     duplicate_detector.targetObject=indices
