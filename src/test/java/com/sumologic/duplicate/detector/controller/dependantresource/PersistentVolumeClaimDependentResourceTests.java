@@ -5,8 +5,10 @@ import com.sumologic.duplicate.detector.controller.ReconcilerConfiguration;
 import com.sumologic.duplicate.detector.controller.customresource.DuplicateMessageScan;
 import com.sumologic.duplicate.detector.controller.customresource.DuplicateMessageScanSpec;
 import com.sumologic.duplicate.detector.controller.customresource.DuplicateMessageScanStatus;
-import io.fabric8.kubernetes.api.model.*;
-import io.fabric8.kubernetes.api.model.batch.v1.Job;
+import io.fabric8.kubernetes.api.model.ObjectMeta;
+import io.fabric8.kubernetes.api.model.ObjectMetaBuilder;
+import io.fabric8.kubernetes.api.model.PersistentVolumeClaim;
+import io.fabric8.kubernetes.api.model.PersistentVolumeClaimBuilder;
 import io.javaoperatorsdk.operator.api.reconciler.Context;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -20,8 +22,9 @@ import java.util.Map;
 import java.util.stream.Stream;
 
 import static io.javaoperatorsdk.operator.ReconcilerUtils.loadYaml;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
-import static org.junit.jupiter.api.Assertions.*;
 
 @ExtendWith(MockitoExtension.class)
 public class PersistentVolumeClaimDependentResourceTests extends BaseTests {
@@ -104,8 +107,7 @@ public class PersistentVolumeClaimDependentResourceTests extends BaseTests {
   void beforeEach() {
     resource = new PersistentVolumeClaimDependentResource(configuration);
 
-    scan = new DuplicateMessageScan(spec);
-    scan.setMetadata(objectMeta);
+    scan = createScan(spec);
   }
 
   private PersistentVolumeClaim claimForSegment(int index) {

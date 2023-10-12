@@ -22,8 +22,9 @@ import java.util.Map;
 import java.util.stream.Stream;
 
 import static io.javaoperatorsdk.operator.ReconcilerUtils.loadYaml;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
-import static org.junit.jupiter.api.Assertions.*;
 
 @ExtendWith(MockitoExtension.class)
 public class JobDependentResourceTests extends BaseTests {
@@ -136,8 +137,7 @@ public class JobDependentResourceTests extends BaseTests {
   void beforeEach() {
     resource = new JobDependentResource(configuration);
 
-    scan = new DuplicateMessageScan(spec);
-    scan.setMetadata(objectMeta);
+    scan = createScan(spec);
   }
 
   private void verifyJobs(Map<String, Job> expected, Map<String, Job> actual) {

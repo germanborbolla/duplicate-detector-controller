@@ -3,7 +3,9 @@ package com.sumologic.duplicate.detector.controller;
 import com.sumologic.duplicate.detector.controller.customresource.DuplicateMessageScan;
 import com.sumologic.duplicate.detector.controller.customresource.DuplicateMessageScanStatus;
 import com.sumologic.duplicate.detector.controller.customresource.Segment;
-import com.sumologic.duplicate.detector.controller.dependantresource.*;
+import com.sumologic.duplicate.detector.controller.dependantresource.ConfigMapDependentResource;
+import com.sumologic.duplicate.detector.controller.dependantresource.JobDependentResource;
+import com.sumologic.duplicate.detector.controller.dependantresource.PersistentVolumeClaimDependentResource;
 import io.fabric8.kubernetes.api.model.ConfigMap;
 import io.fabric8.kubernetes.api.model.PersistentVolumeClaim;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
@@ -28,8 +30,7 @@ public class DuplicateMessageScanReconciler implements Reconciler<DuplicateMessa
   private final Workflow<DuplicateMessageScan> workflow;
 
   public DuplicateMessageScanReconciler(KubernetesClient client, ReconcilerConfiguration reconcilerConfiguration) {
-    configMapDependentResource = ProviderKubernetesDependentResource.create(ConfigMap.class,
-      new ConfigMapProvider(), client);
+    configMapDependentResource = ConfigMapDependentResource.create(client);
     pvcDependentResource = PersistentVolumeClaimDependentResource
       .create(reconcilerConfiguration.persistentVolumeConfiguration, client);
     jobDependentResource = JobDependentResource.create(reconcilerConfiguration.jobConfiguration, client);

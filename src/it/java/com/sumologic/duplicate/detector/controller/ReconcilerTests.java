@@ -51,12 +51,14 @@ public class ReconcilerTests {
   @DisplayName("Generate the resources for a scan")
   void generate() {
     String name = "test-scan";
-    createScan(name);
 
     ResourceWatcher<Job> jobWatcher = new ResourceWatcher<>();
     ResourceWatcher<PersistentVolumeClaim> pvcWatcher = new ResourceWatcher<>();
     operator.getKubernetesClient().resources(Job.class).inNamespace(operator.getNamespace()).watch(jobWatcher);
     operator.getKubernetesClient().resources(PersistentVolumeClaim.class).inNamespace(operator.getNamespace()).watch(pvcWatcher);
+
+    createScan(name);
+
     await()
       .atMost(Duration.ofMinutes(1))
       .pollInterval(Duration.ofSeconds(1))
@@ -85,10 +87,12 @@ public class ReconcilerTests {
   @DisplayName("Should not create multiple jobs for simple jobs")
   void oneJobPerSimpleScan() {
     String name = "test-scan";
-    createScan(name);
 
     ResourceWatcher<Job> watcher = new ResourceWatcher<>();
     operator.getKubernetesClient().resources(Job.class).inNamespace(operator.getNamespace()).watch(watcher);
+
+    createScan(name);
+
     await()
       .atMost(Duration.ofMinutes(1))
       .pollInterval(Duration.ofSeconds(1))
@@ -106,11 +110,13 @@ public class ReconcilerTests {
   void noVolumeWhenParallelGreaterThanOne() {
     String name = "test-scan";
     spec.customers = List.of("0000000000000475", "0000000000000476");
-    createScan(name);
     ResourceWatcher<Job> jobWatcher = new ResourceWatcher<>();
     ResourceWatcher<PersistentVolumeClaim> pvcWatcher = new ResourceWatcher<>();
     operator.getKubernetesClient().resources(Job.class).inNamespace(operator.getNamespace()).watch(jobWatcher);
     operator.getKubernetesClient().resources(PersistentVolumeClaim.class).inNamespace(operator.getNamespace()).watch(pvcWatcher);
+
+    createScan(name);
+
     await()
       .atMost(Duration.ofMinutes(1))
       .pollInterval(Duration.ofSeconds(1)).untilAsserted(() -> {
