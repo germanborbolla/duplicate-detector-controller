@@ -122,7 +122,7 @@ public class JobDependentResourceTests extends BaseTests {
     @Test
     void handleSingleSegmentScans() {
       spec.customers = List.of("0000000000000005");
-      verifyJobs(Map.of("0", jobForSegment("0", "/job/single-customer.yaml")),
+      verifyJobs(Map.of("0", jobForSegment("0")),
         resource.desiredResources(scan, context));
 
       DuplicateMessageScanStatus status = new DuplicateMessageScanStatus(spec.getSegments());
@@ -141,6 +141,7 @@ public class JobDependentResourceTests extends BaseTests {
   }
 
   private void verifyJobs(Map<String, Job> expected, Map<String, Job> actual) {
+    assertEquals(expected.size(), actual.size());
     expected.forEach((key, job) -> {
       assertTrue(actual.containsKey(key), String.format("Job for key %1s not found, keys are: %1s", key,
         actual.keySet()));
@@ -156,18 +157,20 @@ public class JobDependentResourceTests extends BaseTests {
     return Map.entry(String.valueOf(index), jobForSegment(index));
   }
   private Job jobForSegment(String segmentIndex) {
-    return jobForSegment(segmentIndex, "/job/multiple-segments-base-job.yaml");
-  }
-
-  private Job jobForSegment(String segmentIndex, String baseJobYAML) {
-    Job baseExpectedJob = loadYaml(Job.class, getClass(), baseJobYAML);
+    Job baseExpectedJob = loadYaml(Job.class, getClass(), "/job/base-job.yaml");
+    String name = String.format("test-%1s", segmentIndex);
     return new JobBuilder(baseExpectedJob)
       .withMetadata(new ObjectMetaBuilder(baseExpectedJob.getMetadata())
-        .withName(String.format("test-%1s", segmentIndex))
-        .addToLabels(Constants.JOB_SEGMENT_LABEL_KEY, segmentIndex).build())
-      .editSpec().editTemplate().editSpec().editFirstContainer()
+        .withName(name)
+        .addToLabels(Constants.SEGMENT_LABEL_KEY, segmentIndex).build())
+      .editSpec().editTemplate().editSpec()
+      .editFirstContainer()
       .addNewEnv().withName(Constants.JOB_COMPLETION_INDEX_ENV_NAME).withValue(segmentIndex).endEnv()
-      .endContainer().endSpec().endTemplate().endSpec()
+      .endContainer()
+      .editMatchingVolume(v -> v.getName().equals("duplicate-detector-pvc"))
+      .editPersistentVolumeClaim().withClaimName(name).endPersistentVolumeClaim()
+      .endVolume()
+      .endSpec().endTemplate().endSpec()
       .build();
   }
 

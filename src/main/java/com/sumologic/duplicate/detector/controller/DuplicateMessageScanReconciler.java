@@ -25,39 +25,28 @@ public class DuplicateMessageScanReconciler implements Reconciler<DuplicateMessa
   private final KubernetesDependentResource<ConfigMap, DuplicateMessageScan> configMapDependentResource;
   private final KubernetesDependentResource<PersistentVolumeClaim, DuplicateMessageScan> pvcDependentResource;
   private final KubernetesDependentResource<Job, DuplicateMessageScan> jobDependentResource;
-  private final Workflow<DuplicateMessageScan> nonParallelWorkflow;
-  private final Workflow<DuplicateMessageScan> parallelWorkflow;
+  private final Workflow<DuplicateMessageScan> workflow;
 
   public DuplicateMessageScanReconciler(KubernetesClient client, ReconcilerConfiguration reconcilerConfiguration) {
     configMapDependentResource = ProviderKubernetesDependentResource.create(ConfigMap.class,
       new ConfigMapProvider(), client);
-    pvcDependentResource = ProviderKubernetesDependentResource.create(PersistentVolumeClaim.class,
-      new PersistentVolumeClaimProvider(reconcilerConfiguration.persistentVolumeConfiguration), client);
+    pvcDependentResource = PersistentVolumeClaimDependentResource
+      .create(reconcilerConfiguration.persistentVolumeConfiguration, client);
     jobDependentResource = JobDependentResource.create(reconcilerConfiguration.jobConfiguration, client);
 
-    nonParallelWorkflow = new WorkflowBuilder<DuplicateMessageScan>()
+    workflow = new WorkflowBuilder<DuplicateMessageScan>()
       .addDependentResource(configMapDependentResource)
       .addDependentResource(pvcDependentResource)
       .addDependentResource(jobDependentResource).dependsOn(configMapDependentResource, pvcDependentResource)
-      .build();
-
-    parallelWorkflow = new WorkflowBuilder<DuplicateMessageScan>()
-      .addDependentResource(configMapDependentResource)
-      .addDependentResource(jobDependentResource).dependsOn(configMapDependentResource)
       .build();
   }
 
   @Override
   public UpdateControl<DuplicateMessageScan> reconcile(DuplicateMessageScan scan,
                                                        Context<DuplicateMessageScan> context) {
-    UpdateControl<DuplicateMessageScan> control;
     DuplicateMessageScanStatus updatedStatus = calculateStatus(scan, context);
-    if (scan.getSpec().getSegments().size() == 1) {
-      nonParallelWorkflow.reconcile(scan, context);
-    } else {
-      parallelWorkflow.reconcile(scan, context);
-    }
-    control = UpdateControl.patchStatus(scan.withStatus(updatedStatus));
+    workflow.reconcile(scan, context);
+    UpdateControl<DuplicateMessageScan> control = UpdateControl.patchStatus(scan.withStatus(updatedStatus));
     logger.debug("Reconciled scan {} with control {}", scan, control);
     return control;
   }
@@ -77,31 +66,18 @@ public class DuplicateMessageScanReconciler implements Reconciler<DuplicateMessa
       configMapDependentResource, pvcDependentResource, jobDependentResource);
   }
 
-  UpdateControl<DuplicateMessageScan> singleReconcile(DuplicateMessageScan scan,
-                                                      Context<DuplicateMessageScan> context) {
-    DuplicateMessageScanStatus status = scan.getOrCreateStatus();
-    context.getSecondaryResource(Job.class).ifPresent(job -> {
-      if (hasJobSucceeded(job)) {
-        status.completed();
-      } else if (hasJobFailed(job)) {
-        status.failed("All attempts to execute scan failed");
-      } else {
-        status.segments.forEach(Segment::processing);
-      }
-    });
-    return UpdateControl.patchStatus(scan.withStatus(status));
-  }
-
   DuplicateMessageScanStatus calculateStatus(DuplicateMessageScan scan,
                                              Context<DuplicateMessageScan> context) {
     DuplicateMessageScanStatus status = scan.getOrCreateStatus();
     context.getSecondaryResources(Job.class).forEach(job -> Optional.ofNullable(job.getMetadata().getLabels())
-      .flatMap(labels -> Optional.ofNullable(labels.get(Constants.JOB_SEGMENT_LABEL_KEY))
+      .flatMap(labels -> Optional.ofNullable(labels.get(Constants.SEGMENT_LABEL_KEY))
         .map(Integer::parseInt)).ifPresent(index -> {
           Segment segment = status.segments.get(index);
-          if (hasJobSucceeded(job)) {
+        if (job.getStatus() != null && job.getStatus().getSucceeded() != null
+          && job.getStatus().getSucceeded() == 1) {
             segment.completed();
-          } else if (hasJobFailed(job)) {
+          } else if (job.getStatus() != null && job.getStatus().getFailed() != null
+          && job.getStatus().getFailed() == 1) {
             segment.failed();
           } else {
             segment.processing();
@@ -117,14 +93,6 @@ public class DuplicateMessageScanReconciler implements Reconciler<DuplicateMessa
     }
     status.updateSegmentsCounts();
     return status;
-  }
-
-  private boolean hasJobSucceeded(Job job) {
-    return job.getStatus() != null && job.getStatus().getSucceeded() != null && job.getStatus().getSucceeded() == 1;
-  }
-
-  private boolean hasJobFailed(Job job) {
-    return job.getStatus() != null && job.getStatus().getFailed() != null && job.getStatus().getFailed() == 1;
   }
 
 

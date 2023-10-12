@@ -4,6 +4,7 @@ import com.sumologic.duplicate.detector.controller.customresource.DuplicateMessa
 import com.sumologic.duplicate.detector.controller.customresource.DuplicateMessageScanSpec;
 import com.sumologic.duplicate.detector.controller.customresource.Segment;
 import io.fabric8.kubernetes.api.model.ConfigMap;
+import io.fabric8.kubernetes.api.model.HasMetadata;
 import io.fabric8.kubernetes.api.model.ObjectMetaBuilder;
 import io.fabric8.kubernetes.api.model.PersistentVolumeClaim;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
@@ -52,8 +53,10 @@ public class ReconcilerTests {
     String name = "test-scan";
     createScan(name);
 
-    JobWatcher watcher = new JobWatcher();
-    operator.getKubernetesClient().resources(Job.class).inNamespace(operator.getNamespace()).watch(watcher);
+    ResourceWatcher<Job> jobWatcher = new ResourceWatcher<>();
+    ResourceWatcher<PersistentVolumeClaim> pvcWatcher = new ResourceWatcher<>();
+    operator.getKubernetesClient().resources(Job.class).inNamespace(operator.getNamespace()).watch(jobWatcher);
+    operator.getKubernetesClient().resources(PersistentVolumeClaim.class).inNamespace(operator.getNamespace()).watch(pvcWatcher);
     await()
       .atMost(Duration.ofMinutes(1))
       .pollInterval(Duration.ofSeconds(1))
@@ -64,16 +67,17 @@ public class ReconcilerTests {
           assertThat(configMap).isNotNull();
           assertThat(configMap.getMetadata().getName()).isEqualTo(name);
 
-          PersistentVolumeClaim pvc = operator.get(PersistentVolumeClaim.class, name);
-          assertThat(pvc).isNotNull();
-
           assertScanIsComplete(name);
 
-          Job job = watcher.jobs.get("0");
+          PersistentVolumeClaim pvc = pvcWatcher.resources.get("0");
+          assertThat(pvc).isNotNull();
+          assertThat(pvcWatcher.actionsPerJob.get("0")).contains(Watcher.Action.DELETED);
+
+          Job job = jobWatcher.resources.get("0");
           assertThat(job).isNotNull();
           assertThat(job.getStatus().getSucceeded()).isEqualTo(1);
           assertThat(job.getStatus().getCompletionTime()).isNotNull();
-          assertThat(watcher.actionsPerJob.get("0")).contains(Watcher.Action.DELETED);
+          assertThat(jobWatcher.actionsPerJob.get("0")).contains(Watcher.Action.DELETED);
         });
   }
 
@@ -83,7 +87,7 @@ public class ReconcilerTests {
     String name = "test-scan";
     createScan(name);
 
-    JobWatcher watcher = new JobWatcher();
+    ResourceWatcher<Job> watcher = new ResourceWatcher<>();
     operator.getKubernetesClient().resources(Job.class).inNamespace(operator.getNamespace()).watch(watcher);
     await()
       .atMost(Duration.ofMinutes(1))
@@ -94,7 +98,7 @@ public class ReconcilerTests {
       .during(Duration.ofSeconds(15))
       .atMost(Duration.ofSeconds(30))
       .pollInterval(Duration.ofSeconds(1))
-      .until(watcher.jobs::size, size -> size == 1);
+      .until(watcher.resources::size, size -> size == 1);
   }
 
   @Test
@@ -103,8 +107,10 @@ public class ReconcilerTests {
     String name = "test-scan";
     spec.customers = List.of("0000000000000475", "0000000000000476");
     createScan(name);
-    JobWatcher watcher = new JobWatcher();
-    operator.getKubernetesClient().resources(Job.class).inNamespace(operator.getNamespace()).watch(watcher);
+    ResourceWatcher<Job> jobWatcher = new ResourceWatcher<>();
+    ResourceWatcher<PersistentVolumeClaim> pvcWatcher = new ResourceWatcher<>();
+    operator.getKubernetesClient().resources(Job.class).inNamespace(operator.getNamespace()).watch(jobWatcher);
+    operator.getKubernetesClient().resources(PersistentVolumeClaim.class).inNamespace(operator.getNamespace()).watch(pvcWatcher);
     await()
       .atMost(Duration.ofMinutes(1))
       .pollInterval(Duration.ofSeconds(1)).untilAsserted(() -> {
@@ -113,12 +119,15 @@ public class ReconcilerTests {
 
         assertScanIsComplete(name);
 
-        assertThat(watcher.jobs).hasSize(spec.getSegments().size());
-        assertThat(watcher.jobs.keySet()).containsAll(spec.getSegments().stream().map(s -> s.id).collect(Collectors.toList()));
-        assertThat(watcher.jobs.values()).allMatch(job -> job.getStatus().getSucceeded() == 1);
-        spec.getSegments().forEach(s -> assertThat(watcher.actionsPerJob.get(s.id)).withFailMessage(String.format("Job %s was not deleted", s.id)).contains(Watcher.Action.DELETED));
-      });
+        assertThat(jobWatcher.resources).hasSize(spec.getSegments().size());
+        assertThat(jobWatcher.resources.keySet()).containsAll(spec.getSegments().stream().map(s -> s.id).collect(Collectors.toList()));
+        assertThat(jobWatcher.resources.values()).allMatch(job -> job.getStatus().getSucceeded() == 1);
+        spec.getSegments().forEach(s -> assertThat(jobWatcher.actionsPerJob.get(s.id)).withFailMessage(String.format("Job %s was not deleted", s.id)).contains(Watcher.Action.DELETED));
 
+        assertThat(pvcWatcher.resources).hasSize(spec.getSegments().size());
+        assertThat(pvcWatcher.resources.keySet()).containsAll(spec.getSegments().stream().map(s -> s.id).collect(Collectors.toList()));
+        spec.getSegments().forEach(s -> assertThat(pvcWatcher.actionsPerJob.get(s.id)).withFailMessage(String.format("PVC %s was not deleted", s.id)).contains(Watcher.Action.DELETED));
+      });
   }
 
   private void assertScanIsComplete(String name) {
@@ -142,13 +151,13 @@ public class ReconcilerTests {
     operator.create(scan);
   }
 
-  class JobWatcher implements Watcher<Job> {
-    Map<String, Job> jobs = new HashMap<>();
+  static class ResourceWatcher<R extends HasMetadata> implements Watcher<R> {
+    Map<String, R> resources = new HashMap<>();
     Map<String, List<Watcher.Action>> actionsPerJob = new HashMap<>();
     @Override
-    public void eventReceived(Action action, Job resource) {
-      String key = resource.getMetadata().getLabels().get(Constants.JOB_SEGMENT_LABEL_KEY);
-      jobs.put(key, resource);
+    public void eventReceived(Action action, R resource) {
+      String key = resource.getMetadata().getLabels().get(Constants.SEGMENT_LABEL_KEY);
+      resources.put(key, resource);
       actionsPerJob.computeIfAbsent(key, k -> new LinkedList<>()).add(action);
     }
 

@@ -5,23 +5,23 @@ import com.sumologic.duplicate.detector.controller.ReconcilerConfiguration;
 import com.sumologic.duplicate.detector.controller.customresource.DuplicateMessageScan;
 import com.sumologic.duplicate.detector.controller.customresource.DuplicateMessageScanStatus;
 import com.sumologic.duplicate.detector.controller.customresource.Segment;
-import io.fabric8.kubernetes.api.model.*;
+import io.fabric8.kubernetes.api.model.EnvVarBuilder;
+import io.fabric8.kubernetes.api.model.ObjectMetaBuilder;
+import io.fabric8.kubernetes.api.model.PodSpecBuilder;
+import io.fabric8.kubernetes.api.model.PodSpecFluent;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.api.model.batch.v1.JobBuilder;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.javaoperatorsdk.operator.api.reconciler.Context;
-import io.javaoperatorsdk.operator.processing.dependent.BulkDependentResource;
-import io.javaoperatorsdk.operator.processing.dependent.kubernetes.CRUDKubernetesDependentResource;
 import io.javaoperatorsdk.operator.processing.dependent.kubernetes.KubernetesDependentResourceConfig;
 
 import java.util.Map;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static io.javaoperatorsdk.operator.ReconcilerUtils.loadYaml;
 
-public class JobDependentResource extends CRUDKubernetesDependentResource<Job, DuplicateMessageScan> implements BulkDependentResource<Job, DuplicateMessageScan> {
+public class JobDependentResource extends AbstractBulkDependentResource<Job> {
 
   public static JobDependentResource create(ReconcilerConfiguration.JobConfiguration configuration, KubernetesClient client) {
     JobDependentResource resource = new JobDependentResource(configuration);
@@ -52,28 +52,20 @@ public class JobDependentResource extends CRUDKubernetesDependentResource<Job, D
       scan.getSpec().getSegments().size() == 1)));
   }
 
-  @Override
-  public Map<String, Job> getSecondaryResources(DuplicateMessageScan scan, Context<DuplicateMessageScan> context) {
-    return context.getSecondaryResourcesAsStream(Job.class)
-      .filter(job -> job.getMetadata() != null && job.getMetadata().getLabels() != null
-        && job.getMetadata().getLabels().containsKey(Constants.JOB_SEGMENT_LABEL_KEY))
-      .collect(Collectors.toMap(job -> job.getMetadata().getLabels().get(Constants.JOB_SEGMENT_LABEL_KEY),
-        Function.identity()));
-  }
-
   private Job createJobForSegment(DuplicateMessageScan scan, Segment segment, boolean usePVC) {
     String baseJobYaml = "/baseDependantResources/job.yaml";
     if (configuration.isUseIntegrationTestJob()) {
       baseJobYaml = "/baseDependantResources/integration-test-job.yaml";
     }
+    String segmentName = String.format("%s-%s", scan.getMetadata().getName(), segment.id);
     Job base = loadYaml(Job.class, getClass(), baseJobYaml);
     PodSpecBuilder podSpecBuilder = new PodSpecBuilder(base.getSpec().getTemplate().getSpec());
     configureContainer(podSpecBuilder, segment);
-    configureVolumes(podSpecBuilder, scan.getMetadata().getName(), usePVC);
+    configureVolumes(podSpecBuilder, scan.getMetadata().getName(), segmentName);
     return new JobBuilder(base)
       .withMetadata(new ObjectMetaBuilder(scan.buildDependentObjectMetadata())
-        .withName(String.format("%s-%s", scan.getMetadata().getName(), segment.id))
-        .addToLabels(Constants.JOB_SEGMENT_LABEL_KEY, segment.id)
+        .withName(segmentName)
+        .addToLabels(Constants.SEGMENT_LABEL_KEY, segment.id)
         .build())
       .editSpec()
       .editTemplate().withSpec(podSpecBuilder.build()).endTemplate()
@@ -95,7 +87,7 @@ public class JobDependentResource extends CRUDKubernetesDependentResource<Job, D
     containerBuilder.endContainer();
   }
 
-  private void configureVolumes(PodSpecBuilder podSpecBuilder, String name, boolean usePVC) {
+  private void configureVolumes(PodSpecBuilder podSpecBuilder, String name, String pvcName) {
     if (configuration.isUseIntegrationTestJob()) {
       podSpecBuilder.addNewVolume().withName("config").withNewConfigMap()
         .withDefaultMode(420).withName(name)
@@ -107,13 +99,8 @@ public class JobDependentResource extends CRUDKubernetesDependentResource<Job, D
         .addNewSource().withNewConfigMap().withName(name).endConfigMap().endSource()
         .endProjected().endVolume();
     }
-    if (usePVC) {
-      podSpecBuilder.addNewVolume().withName("duplicate-detector-pvc")
-        .withNewPersistentVolumeClaim().withClaimName(name).endPersistentVolumeClaim()
-        .endVolume();
-    } else {
-      podSpecBuilder.addNewVolume().withName("duplicate-detector-pvc")
-        .withNewEmptyDir().endEmptyDir().endVolume();
-    }
+    podSpecBuilder.addNewVolume().withName("duplicate-detector-pvc")
+      .withNewPersistentVolumeClaim().withClaimName(pvcName).endPersistentVolumeClaim()
+      .endVolume();
   }
 }
