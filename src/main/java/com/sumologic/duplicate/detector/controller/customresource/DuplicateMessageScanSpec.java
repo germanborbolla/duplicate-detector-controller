@@ -17,15 +17,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 public class DuplicateMessageScanSpec {
-  protected static final String CUSTOMERS_KEY = "duplicate_detector.customers";
-  protected static final String START_TIME_KEY = "duplicate_detector.startTime";
-  protected static final String END_TIME_KEY = "duplicate_detector.endTime";
-  protected static final String TARGET_OBJECT_KEY = "duplicate_detector.targetObject";
-  protected static final String WORKING_DIR_KEY = "duplicate_detector.parentWorkingDir";
-
-  private static final String DEFAULT_TARGET_OBJECT = "indices";
-
-  private static final String WORKING_DIR = "/usr/sumo/system-tools/duplicate-detector-state";
   @JsonPropertyDescription("Start time for the scan, in ISO format")
   @Required
   @PrinterColumn(name = "START_TIME", priority = 0)
@@ -102,16 +93,6 @@ public class DuplicateMessageScanSpec {
       .toString();
   }
 
-  public Map<String, Map<String, String>> buildInputs() {
-    List<Segment> withTimeRangeSplit = getSegments();
-    Map<String, Map<String, String>> inputs = new HashMap<>();
-    for (int i = 0; i < withTimeRangeSplit.size(); i++) {
-      inputs.put(String.format("duplicate_detector-%1d.properties", i),
-        mapFor(withTimeRangeSplit.get(i)));
-    }
-    return inputs;
-  }
-
   public List<Segment> getSegments() {
     List<Pair<String, String>> scanningSegments = splitTimeRange();
     AtomicInteger id = new AtomicInteger();
@@ -138,15 +119,5 @@ public class DuplicateMessageScanSpec {
       segments.add(Pair.of(startTimeInstant.toString(), endTimeInstant.toString()));
       return segments;
     }
-  }
-
-  private Map<String, String> mapFor(Segment segment) {
-    Map<String, String> map = new HashMap<>();
-    map.put(CUSTOMERS_KEY, segment.customer);
-    map.put(START_TIME_KEY, segment.startTime);
-    map.put(END_TIME_KEY, segment.endTime);
-    map.put(TARGET_OBJECT_KEY, Optional.ofNullable(targetObject).orElse(DEFAULT_TARGET_OBJECT));
-    map.put(WORKING_DIR_KEY, WORKING_DIR);
-    return map;
   }
 }

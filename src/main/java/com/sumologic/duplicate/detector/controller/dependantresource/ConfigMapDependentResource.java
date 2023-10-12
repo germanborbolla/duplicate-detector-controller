@@ -2,6 +2,7 @@ package com.sumologic.duplicate.detector.controller.dependantresource;
 
 import com.sumologic.duplicate.detector.controller.Constants;
 import com.sumologic.duplicate.detector.controller.customresource.DuplicateMessageScan;
+import com.sumologic.duplicate.detector.controller.customresource.Segment;
 import io.fabric8.kubernetes.api.model.ConfigMap;
 import io.fabric8.kubernetes.api.model.ConfigMapBuilder;
 import io.fabric8.kubernetes.client.KubernetesClient;
@@ -11,10 +12,20 @@ import io.javaoperatorsdk.operator.processing.dependent.kubernetes.KubernetesDep
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.util.Map;
+import java.util.List;
+import java.util.Optional;
 
 public class ConfigMapDependentResource extends CRUDKubernetesDependentResource<ConfigMap, DuplicateMessageScan> {
 
+  protected static final String CUSTOMERS_KEY = "duplicate_detector.customers";
+  protected static final String START_TIME_KEY = "duplicate_detector.startTime";
+  protected static final String END_TIME_KEY = "duplicate_detector.endTime";
+  protected static final String TARGET_OBJECT_KEY = "duplicate_detector.targetObject";
+  protected static final String WORKING_DIR_KEY = "duplicate_detector.parentWorkingDir";
+
+  private static final String DEFAULT_TARGET_OBJECT = "indices";
+
+  private static final String WORKING_DIR = "/usr/sumo/system-tools/duplicate-detector-state";
   public static ConfigMapDependentResource create(KubernetesClient client) {
     ConfigMapDependentResource resource = new ConfigMapDependentResource();
     resource.setKubernetesClient(client);
@@ -32,15 +43,21 @@ public class ConfigMapDependentResource extends CRUDKubernetesDependentResource<
     // TODO(panda, 8/29/23): how to pass a log4j
     ConfigMapBuilder builder = new ConfigMapBuilder()
       .withMetadata(scan.buildDependentObjectMetadata());
-    scan.getSpec().buildInputs().forEach((key, input) -> builder.addToData(key, mapToString(input)));
+    List<Segment> segments = scan.getSpec().getSegments();
+    segments.forEach(segment -> builder.addToData(String.format("duplicate_detector-%s.properties", segment.id),
+      propertiesForSegment(segment, scan.getSpec().targetObject)));
     return builder.build();
   }
 
-  private String mapToString(Map<String, String> map) {
+  private String propertiesForSegment(Segment segment, String targetObject) {
     StringWriter writer = new StringWriter();
     PrintWriter out = new PrintWriter(writer);
     String format = "%1s=%2s%n";
-    map.keySet().stream().sorted().forEach(key -> out.printf(format, key, map.get(key)));
+    out.printf(format, CUSTOMERS_KEY, segment.customer);
+    out.printf(format, START_TIME_KEY, segment.startTime);
+    out.printf(format, END_TIME_KEY, segment.endTime);
+    out.printf(format, TARGET_OBJECT_KEY, Optional.ofNullable(targetObject).orElse(DEFAULT_TARGET_OBJECT));
+    out.printf(format, WORKING_DIR_KEY, WORKING_DIR);
     return writer.toString();
   }
 }
