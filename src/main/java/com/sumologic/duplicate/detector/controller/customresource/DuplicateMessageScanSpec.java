@@ -23,8 +23,6 @@ public class DuplicateMessageScanSpec {
   protected static final String TARGET_OBJECT_KEY = "duplicate_detector.targetObject";
   protected static final String WORKING_DIR_KEY = "duplicate_detector.parentWorkingDir";
 
-  private static final Map.Entry<String, String> KILL_SIDECAR_ENTRY =
-    Map.entry("duplicate_detector.onExitInvoke", "pkill fluent-bit");
   private static final String DEFAULT_TARGET_OBJECT = "indices";
 
   @JsonPropertyDescription("Start time for the scan, in ISO format")
@@ -103,13 +101,13 @@ public class DuplicateMessageScanSpec {
       .toString();
   }
 
-  public Map<String, Map<String, String>> buildInputs(boolean includeKillSidecar) {
+  public Map<String, Map<String, String>> buildInputs() {
     List<Segment> withTimeRangeSplit = getSegments();
     Map<String, Map<String, String>> inputs = new HashMap<>();
     for (int i = 0; i < withTimeRangeSplit.size(); i++) {
       inputs.put(String.format("duplicate_detector-%1d.properties", i),
         mapFor(withTimeRangeSplit.get(i),
-          String.format("/usr/sumo/system-tools/duplicate-detector-state-%1d", i), includeKillSidecar));
+          String.format("/usr/sumo/system-tools/duplicate-detector-state-%1d", i)));
     }
     return inputs;
   }
@@ -142,12 +140,8 @@ public class DuplicateMessageScanSpec {
     }
   }
 
-  private Map<String, String> mapFor(Segment segment, String workingDir,
-                                     boolean includeKillSidecar) {
+  private Map<String, String> mapFor(Segment segment, String workingDir) {
     Map<String, String> map = new HashMap<>();
-    if (includeKillSidecar) {
-      map.put(KILL_SIDECAR_ENTRY.getKey(),KILL_SIDECAR_ENTRY.getValue());
-    }
     map.put(CUSTOMERS_KEY, segment.customer);
     map.put(START_TIME_KEY, segment.startTime);
     map.put(END_TIME_KEY, segment.endTime);

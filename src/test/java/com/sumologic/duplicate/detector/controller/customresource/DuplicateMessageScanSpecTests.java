@@ -75,9 +75,8 @@ public class DuplicateMessageScanSpecTests {
         DuplicateMessageScanSpec.START_TIME_KEY, "2023-09-06T10:00:00-07:00",
         DuplicateMessageScanSpec.END_TIME_KEY, "2023-09-06T10:15:00-07:00",
         DuplicateMessageScanSpec.TARGET_OBJECT_KEY, "indices",
-        DuplicateMessageScanSpec.WORKING_DIR_KEY, "/usr/sumo/system-tools/duplicate-detector-state-0",
-        "duplicate_detector.onExitInvoke", "pkill fluent-bit")
-      ).entrySet(), spec.buildInputs(true).entrySet());
+        DuplicateMessageScanSpec.WORKING_DIR_KEY, "/usr/sumo/system-tools/duplicate-detector-state-0")
+      ).entrySet(), spec.buildInputs().entrySet());
     assertIterableEquals(
       Map.of("duplicate_detector-0.properties", Map.of(
         DuplicateMessageScanSpec.CUSTOMERS_KEY, "0000000000000005",
@@ -85,7 +84,7 @@ public class DuplicateMessageScanSpecTests {
         DuplicateMessageScanSpec.END_TIME_KEY, "2023-09-06T10:15:00-07:00",
         DuplicateMessageScanSpec.TARGET_OBJECT_KEY, "indices",
         DuplicateMessageScanSpec.WORKING_DIR_KEY, "/usr/sumo/system-tools/duplicate-detector-state-0")
-      ).entrySet(), spec.buildInputs(false).entrySet());
+      ).entrySet(), spec.buildInputs().entrySet());
 
     spec.targetObject = "blocks";
     assertIterableEquals(
@@ -94,13 +93,12 @@ public class DuplicateMessageScanSpecTests {
         DuplicateMessageScanSpec.START_TIME_KEY, "2023-09-06T10:00:00-07:00",
         DuplicateMessageScanSpec.END_TIME_KEY, "2023-09-06T10:15:00-07:00",
         DuplicateMessageScanSpec.TARGET_OBJECT_KEY, "blocks",
-        DuplicateMessageScanSpec.WORKING_DIR_KEY, "/usr/sumo/system-tools/duplicate-detector-state-0",
-        "duplicate_detector.onExitInvoke", "pkill fluent-bit")
-      ).entrySet(), spec.buildInputs(true).entrySet());
+        DuplicateMessageScanSpec.WORKING_DIR_KEY, "/usr/sumo/system-tools/duplicate-detector-state-0")
+      ).entrySet(), spec.buildInputs().entrySet());
 
     spec.customers = List.of("0000000000000005", "0000000000000006");
     spec.targetObject = null;
-    Map<String, Map<String, String>> inputs = spec.buildInputs(true);
+    Map<String, Map<String, String>> inputs = spec.buildInputs();
     assertAll("first input", () -> assertTrue(inputs.containsKey("duplicate_detector-0.properties")), () -> {
       Map<String, String> input = inputs.get("duplicate_detector-0.properties");
       assertAll(() -> assertEquals("0000000000000005", input.get(DuplicateMessageScanSpec.CUSTOMERS_KEY)),

@@ -32,7 +32,7 @@ public class ConfigMapDependentResource extends CRUDKubernetesDependentResource<
     // TODO(panda, 8/29/23): how to pass a log4j
     ConfigMapBuilder builder = new ConfigMapBuilder()
       .withMetadata(scan.buildDependentObjectMetadata());
-    scan.getSpec().buildInputs(true).forEach((key, input) -> builder.addToData(key, mapToString(input)));
+    scan.getSpec().buildInputs().forEach((key, input) -> builder.addToData(key, mapToString(input)));
     return builder.build();
   }
 
