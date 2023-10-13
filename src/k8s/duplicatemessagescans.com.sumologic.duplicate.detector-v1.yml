@@ -14,38 +14,14 @@ spec:
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
-    - jsonPath: .spec.endTime
-      name: END_TIME
-      priority: 0
-      type: string
     - jsonPath: .spec.startTime
       name: START_TIME
       priority: 0
       type: string
-    - jsonPath: .status.completedSegmentCount
-      name: COMPLETED_SEGMENTS
-      priority: 1
-      type: integer
-    - jsonPath: .status.error
-      name: ERROR
+    - jsonPath: .spec.endTime
+      name: END_TIME
       priority: 0
       type: string
-    - jsonPath: .status.failed
-      name: FAILED
-      priority: 0
-      type: boolean
-    - jsonPath: .status.failedSegmentCount
-      name: FAILED_SEGMENTS
-      priority: 1
-      type: integer
-    - jsonPath: .status.pendingSegmentCount
-      name: PENDING_SEGMENTS
-      priority: 1
-      type: integer
-    - jsonPath: .status.processingSegmentCount
-      name: PROCESSING_SEGMENTS
-      priority: 1
-      type: integer
     - jsonPath: .status.segmentCount
       name: SEGMENTS
       priority: 0
@@ -54,6 +30,30 @@ spec:
       name: SUCCESSFUL
       priority: 0
       type: boolean
+    - jsonPath: .status.failed
+      name: FAILED
+      priority: 0
+      type: boolean
+    - jsonPath: .status.error
+      name: ERROR
+      priority: 0
+      type: string
+    - jsonPath: .status.pendingSegmentCount
+      name: PENDING_SEGMENTS
+      priority: 1
+      type: integer
+    - jsonPath: .status.processingSegmentCount
+      name: PROCESSING_SEGMENTS
+      priority: 1
+      type: integer
+    - jsonPath: .status.completedSegmentCount
+      name: COMPLETED_SEGMENTS
+      priority: 1
+      type: integer
+    - jsonPath: .status.failedSegmentCount
+      name: FAILED_SEGMENTS
+      priority: 1
+      type: integer
     name: v1
     schema:
       openAPIV3Schema:
