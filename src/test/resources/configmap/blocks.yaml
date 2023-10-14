@@ -14,3 +14,4 @@ data:
     duplicate_detector.endTime=2023-09-06T10:15:00-07:00
     duplicate_detector.targetObject=blocks
     duplicate_detector.parentWorkingDir=/usr/sumo/system-tools/duplicate-detector-state
+    duplicate_detector.onExitInvoke=pkill fluent-bit
