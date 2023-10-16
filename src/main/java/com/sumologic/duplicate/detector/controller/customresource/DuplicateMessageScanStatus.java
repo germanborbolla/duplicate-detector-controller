@@ -1,28 +1,29 @@
 package com.sumologic.duplicate.detector.controller.customresource;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
 import com.google.common.base.MoreObjects;
 import io.fabric8.crd.generator.annotation.PrinterColumn;
 import io.javaoperatorsdk.operator.api.ObservedGenerationAwareStatus;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
 import java.util.Objects;
 
 public class DuplicateMessageScanStatus extends ObservedGenerationAwareStatus {
 
 
+    private static final String DATE_PATTERN = "yyyy-MM-dd'T'HH:mm:ssX";
+
     @PrinterColumn(name = "SUCCESSFUL", priority = 0)
     public boolean successful = false;
-
     @PrinterColumn(name = "FAILED", priority = 0)
     public boolean failed = false;
-
     @PrinterColumn(name = "ERROR", priority = 0)
     public String error;
-
     @JsonPropertyDescription("Pairs of time range and customer that will be scanned independently")
     public List<Segment> segments;
-
     @PrinterColumn(name = "SEGMENTS", priority = 0)
     public int segmentCount;
     @PrinterColumn(name = "PENDING_SEGMENTS", priority = 1)
@@ -33,6 +34,12 @@ public class DuplicateMessageScanStatus extends ObservedGenerationAwareStatus {
     public int completedSegmentCount;
     @PrinterColumn(name = "FAILED_SEGMENTS", priority = 1)
     public int failedSegmentCount;
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = DATE_PATTERN)
+    public Date scanStartedTime;
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = DATE_PATTERN)
+    public Date lastUpdateTime;
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = DATE_PATTERN)
+    public Date completionTime;
 
     public DuplicateMessageScanStatus() {
     }
@@ -40,6 +47,11 @@ public class DuplicateMessageScanStatus extends ObservedGenerationAwareStatus {
     public DuplicateMessageScanStatus(List<Segment> segments) {
         this.segments = segments;
         updateSegmentsCounts();
+    }
+
+    public DuplicateMessageScanStatus(List<Segment> segments, Date scanStartedTime) {
+        this(segments);
+        this.scanStartedTime = scanStartedTime;
     }
 
     public void failed(String error) {

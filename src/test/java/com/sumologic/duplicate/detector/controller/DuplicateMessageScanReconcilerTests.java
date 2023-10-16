@@ -18,9 +18,15 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Supplier;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -37,7 +43,8 @@ public class DuplicateMessageScanReconcilerTests {
     new ReconcilerConfiguration.JobConfiguration("image:123", true,
       5, true),
     new ReconcilerConfiguration.PersistentVolumeConfiguration("gp2", "100Mi"));
-
+  private Instant clockInstant;
+  private Clock clock = new MutableClock(() -> clockInstant, ZoneOffset.UTC.normalized());
   protected DuplicateMessageScanReconciler reconciler;
 
   private DuplicateMessageScanSpec spec = new DuplicateMessageScanSpec("2023-09-06T10:00:00-07:00",
@@ -49,14 +56,16 @@ public class DuplicateMessageScanReconcilerTests {
   void testNoJobs() {
     initJobs(Set.of());
 
-    testReconcile(spec.getSegments(), false, false, null);
+    testUpdateStatus(spec.getSegments(), false, false, null,
+      getClockDate(), getClockDate(), null);
   }
 
   @Test
   void testJobWithoutLabels() {
     initJobs(Set.of(jobWithMetadata(objectMetaBuilder.build())));
 
-    testReconcile(spec.getSegments(), false, false, null);
+    testUpdateStatus(spec.getSegments(), false, false, null,
+      getClockDate(), getClockDate(), null);
   }
 
   @Test
@@ -65,7 +74,8 @@ public class DuplicateMessageScanReconcilerTests {
 
     List<Segment> segments = List.copyOf(spec.getSegments());
     segments.get(0).processing();
-    testReconcile(segments, false, false, null);
+    testUpdateStatus(segments, false, false, null,
+      getClockDate(), getClockDate(), null);
   }
 
   @Test
@@ -74,7 +84,8 @@ public class DuplicateMessageScanReconcilerTests {
 
     List<Segment> segments = List.copyOf(spec.getSegments());
     segments.get(0).processing();
-    testReconcile(segments, false, false, null);
+    testUpdateStatus(segments, false, false, null,
+      getClockDate(), getClockDate(), null);
   }
 
   @Test
@@ -83,7 +94,8 @@ public class DuplicateMessageScanReconcilerTests {
 
     List<Segment> segments = List.copyOf(spec.getSegments());
     segments.get(0).processing();
-    testReconcile(segments, false, false, null);
+    testUpdateStatus(segments, false, false, null,
+      getClockDate(), getClockDate(), null);
   }
 
   @Test
@@ -92,7 +104,8 @@ public class DuplicateMessageScanReconcilerTests {
 
     List<Segment> segments = List.copyOf(spec.getSegments());
     segments.get(0).completed();
-    testReconcile(segments, false, false, null);
+    testUpdateStatus(segments, false, false, null,
+      getClockDate(), getClockDate(), null);
   }
 
   @Test
@@ -101,46 +114,50 @@ public class DuplicateMessageScanReconcilerTests {
 
     List<Segment> segments = List.copyOf(spec.getSegments());
     segments.get(0).failed();
-    testReconcile(segments, false, false, null);
+    testUpdateStatus(segments, false, false, null,
+      getClockDate(), getClockDate(), null);
   }
 
   @Test
   void allSegmentsSucceeded() {
-    DuplicateMessageScanStatus status = new DuplicateMessageScanStatus(spec.getSegments());
-    status.segments.get(0).completed();
-    scan.setStatus(status);
+    initJobs(Set.of(jobWithMetadataAndStatus(metadataForSegment(0), jobStatus(1, 0))));
+    reconciler.calculateStatus(scan, context);
 
     initJobs(Set.of(jobWithMetadataAndStatus(metadataForSegment(1), jobStatus(1, 0))));
 
     List<Segment> segments = List.copyOf(spec.getSegments());
     segments.forEach(Segment::completed);
-    testReconcile(segments, true, false, null);
+    testUpdateStatus(segments, true, false, null,
+      getClockDate(), getClockDate(), getClockDate());
   }
 
   @Test
   void allSegmentsFinishedWithSomeFailures() {
-    DuplicateMessageScanStatus status = new DuplicateMessageScanStatus(spec.getSegments());
-    status.segments.get(0).failed();
-    scan.setStatus(status);
+    initJobs(Set.of(jobWithMetadataAndStatus(metadataForSegment(0), jobStatus(0, 1))));
+    reconciler.calculateStatus(scan, context);
 
     initJobs(Set.of(jobWithMetadataAndStatus(metadataForSegment(1), jobStatus(1, 0))));
 
     List<Segment> segments = List.copyOf(spec.getSegments());
     segments.get(0).failed();
     segments.get(1).completed();
-    testReconcile(segments, false, true, "One or more jobs failed");
+    testUpdateStatus(segments, false, true, "One or more jobs failed",
+      getClockDate(), getClockDate(), getClockDate());
   }
 
   @BeforeEach
   private void beforeEach() {
-    reconciler = new DuplicateMessageScanReconciler(client, configuration);
+    clockInstant = Instant.now();
+    reconciler = new DuplicateMessageScanReconciler(client, configuration, clock);
     scan = new DuplicateMessageScan(spec);
   }
 
-  private void testReconcile(List<Segment> expectedSegments,
-                             boolean expectedSuccessful, boolean expectedFailed, String expectedError) {
+  private void testUpdateStatus(List<Segment> expectedSegments,
+                                boolean expectedSuccessful, boolean expectedFailed, String expectedError,
+                                Date expectedScanStartedTime, Date expectedLastUpdateTime, Date expectedCompletionTime) {
     verifyResult(reconciler.calculateStatus(scan, context),
-      expectedSegments, expectedSuccessful, expectedFailed, expectedError);
+      expectedSegments, expectedSuccessful, expectedFailed, expectedError,
+      expectedScanStartedTime, expectedLastUpdateTime, expectedCompletionTime);
   }
 
   private Job jobWithMetadata(ObjectMeta objectMeta) {
@@ -166,7 +183,8 @@ public class DuplicateMessageScanReconcilerTests {
   }
 
   protected void verifyResult(DuplicateMessageScanStatus status, List<Segment> expectedSegments,
-                              boolean expectedSuccessful, boolean expectedFailed, String expectedError) {
+                              boolean expectedSuccessful, boolean expectedFailed, String expectedError,
+                              Date expectedStartTime, Date expectedUpdatedTime, Date expectedFinishedTime) {
     assertNotNull(status);
     assertEquals(expectedSegments.size(), status.segmentCount);
     assertEquals(expectedSegments, status.segments);
@@ -181,5 +199,37 @@ public class DuplicateMessageScanReconcilerTests {
       status.completedSegmentCount);
     assertEquals(expectedSegments.stream().filter(s -> s.status == Segment.SegmentStatus.FAILED).count(),
       status.failedSegmentCount);
+    assertEquals(expectedStartTime, status.scanStartedTime);
+    assertEquals(expectedUpdatedTime, status.lastUpdateTime);
+    assertEquals(expectedFinishedTime, status.completionTime);
+  }
+
+  private Date getClockDate() {
+    return new Date(clock.millis());
+  }
+
+  static class MutableClock extends Clock {
+    private final Supplier<Instant> instantSupplier;
+    private final ZoneId zoneId;
+
+    public MutableClock(Supplier<Instant> instantSupplier, ZoneId zoneId) {
+      this.instantSupplier = instantSupplier;
+      this.zoneId = zoneId;
+    }
+
+    @Override
+    public ZoneId getZone() {
+      return zoneId;
+    }
+
+    @Override
+    public Clock withZone(ZoneId zone) {
+      return new MutableClock(instantSupplier, zoneId);
+    }
+
+    @Override
+    public Instant instant() {
+      return instantSupplier.get();
+    }
   }
 }

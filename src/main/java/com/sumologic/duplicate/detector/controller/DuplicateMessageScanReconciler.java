@@ -18,6 +18,8 @@ import io.javaoperatorsdk.operator.processing.event.source.EventSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.Clock;
+import java.util.Date;
 import java.util.Map;
 import java.util.Optional;
 
@@ -28,8 +30,14 @@ public class DuplicateMessageScanReconciler implements Reconciler<DuplicateMessa
   private final KubernetesDependentResource<PersistentVolumeClaim, DuplicateMessageScan> pvcDependentResource;
   private final KubernetesDependentResource<Job, DuplicateMessageScan> jobDependentResource;
   private final Workflow<DuplicateMessageScan> workflow;
+  private final Clock clock;
 
   public DuplicateMessageScanReconciler(KubernetesClient client, ReconcilerConfiguration reconcilerConfiguration) {
+    this(client, reconcilerConfiguration, Clock.systemUTC());
+  }
+
+  public DuplicateMessageScanReconciler(KubernetesClient client, ReconcilerConfiguration reconcilerConfiguration,
+                                        Clock clock) {
     configMapDependentResource = ConfigMapDependentResource.create(client);
     pvcDependentResource = PersistentVolumeClaimDependentResource
       .create(reconcilerConfiguration.persistentVolumeConfiguration, client);
@@ -40,6 +48,8 @@ public class DuplicateMessageScanReconciler implements Reconciler<DuplicateMessa
       .addDependentResource(pvcDependentResource)
       .addDependentResource(jobDependentResource).dependsOn(configMapDependentResource, pvcDependentResource)
       .build();
+
+    this.clock = clock;
   }
 
   @Override
@@ -56,7 +66,7 @@ public class DuplicateMessageScanReconciler implements Reconciler<DuplicateMessa
   public ErrorStatusUpdateControl<DuplicateMessageScan> updateErrorStatus(DuplicateMessageScan resource,
                                                                           Context<DuplicateMessageScan> context,
                                                                           Exception e) {
-    DuplicateMessageScanStatus status = resource.getOrCreateStatus();
+    DuplicateMessageScanStatus status = getOrCreateStatus(resource);
     status.failed(e.getMessage());
     return ErrorStatusUpdateControl.patchStatus(resource.withStatus(status));
   }
@@ -69,7 +79,8 @@ public class DuplicateMessageScanReconciler implements Reconciler<DuplicateMessa
 
   DuplicateMessageScanStatus calculateStatus(DuplicateMessageScan scan,
                                              Context<DuplicateMessageScan> context) {
-    DuplicateMessageScanStatus status = scan.getOrCreateStatus();
+    DuplicateMessageScanStatus status = getOrCreateStatus(scan);
+    status.lastUpdateTime = currentDate();
     context.getSecondaryResources(Job.class).forEach(job -> Optional.ofNullable(job.getMetadata().getLabels())
       .flatMap(labels -> Optional.ofNullable(labels.get(Constants.SEGMENT_LABEL_KEY))
         .map(Integer::parseInt)).ifPresent(index -> {
@@ -86,6 +97,7 @@ public class DuplicateMessageScanReconciler implements Reconciler<DuplicateMessa
       })
     );
     if (status.segments.stream().allMatch(Segment::isFinished)) {
+      status.completionTime = currentDate();
       if (status.segments.stream().anyMatch(s -> s.status == Segment.SegmentStatus.FAILED)) {
         status.failed("One or more jobs failed");
       } else {
@@ -95,6 +107,15 @@ public class DuplicateMessageScanReconciler implements Reconciler<DuplicateMessa
     status.updateSegmentsCounts();
     return status;
   }
-
-
+  public DuplicateMessageScanStatus getOrCreateStatus(DuplicateMessageScan scan) {
+    DuplicateMessageScanStatus status = scan.getStatus();
+    if (status == null) {
+      status = new DuplicateMessageScanStatus(scan.getSpec().getSegments(), currentDate());
+      scan.setStatus(status);
+    }
+    return status;
+  }
+  private Date currentDate() {
+    return new Date(clock.millis());
+  }
 }

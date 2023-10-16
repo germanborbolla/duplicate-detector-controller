@@ -9,6 +9,8 @@ import io.fabric8.kubernetes.model.annotation.Group;
 import io.fabric8.kubernetes.model.annotation.ShortNames;
 import io.fabric8.kubernetes.model.annotation.Version;
 
+import java.util.Date;
+
 import static com.sumologic.duplicate.detector.controller.Constants.OPERATOR_NAME;
 
 @Group("com.sumologic.duplicate.detector")
@@ -24,13 +26,6 @@ public class DuplicateMessageScan
     this.spec = spec;
   }
 
-  @JsonIgnore
-  public DuplicateMessageScanStatus getOrCreateStatus() {
-    if (status == null) {
-      status = new DuplicateMessageScanStatus(spec.getSegments());
-    }
-    return status;
-  }
   public DuplicateMessageScan withStatus(DuplicateMessageScanStatus status) {
     this.status = status;
     status.updateSegmentsCounts();
