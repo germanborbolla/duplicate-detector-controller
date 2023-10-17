@@ -12,4 +12,11 @@ public class Constants {
     public static final String SEGMENT_LABEL_KEY = "duplicatedetector.sumologic.com/segment-index";
 
     public static final String JOB_COMPLETION_INDEX_ENV_NAME = "JOB_COMPLETION_INDEX";
+
+    public static final String DEFAULT_TARGET_OBJECT = "indices";
+
+    public static final String DEFAULT_VOLUME_SIZE = "300Gi";
+
+    public static final String DEFAULT_VOLUME_STORAGE_CLASS = "gp2";
+
 }

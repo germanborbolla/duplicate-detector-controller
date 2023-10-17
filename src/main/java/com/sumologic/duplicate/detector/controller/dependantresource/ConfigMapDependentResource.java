@@ -22,7 +22,6 @@ public class ConfigMapDependentResource extends CRUDKubernetesDependentResource<
   protected static final String START_TIME_KEY = "duplicate_detector.startTime";
   protected static final String END_TIME_KEY = "duplicate_detector.endTime";
   protected static final String TARGET_OBJECT_KEY = "duplicate_detector.targetObject";
-  private static final String DEFAULT_TARGET_OBJECT = "indices";
   private static final Map.Entry<String, String> WORKING_DIR_ENTRY =
     Map.entry("duplicate_detector.parentWorkingDir", "/usr/sumo/system-tools/duplicate-detector-state");
   private static final Map.Entry<String, String> KILL_SIDECAR_ENTRY =
@@ -58,7 +57,7 @@ public class ConfigMapDependentResource extends CRUDKubernetesDependentResource<
     out.printf(format, CUSTOMERS_KEY, segment.customer);
     out.printf(format, START_TIME_KEY, segment.startTime);
     out.printf(format, END_TIME_KEY, segment.endTime);
-    out.printf(format, TARGET_OBJECT_KEY, Optional.ofNullable(targetObject).orElse(DEFAULT_TARGET_OBJECT));
+    out.printf(format, TARGET_OBJECT_KEY, targetObject);
     out.printf(format, WORKING_DIR_ENTRY.getKey(), WORKING_DIR_ENTRY.getValue());
     out.printf(format, KILL_SIDECAR_ENTRY.getKey(), KILL_SIDECAR_ENTRY.getValue());
     return writer.toString();

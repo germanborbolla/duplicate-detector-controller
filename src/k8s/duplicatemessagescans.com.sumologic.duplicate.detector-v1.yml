@@ -60,42 +60,41 @@ spec:
         properties:
           spec:
             properties:
-              startTime:
-                description: "Start time for the scan, in ISO format"
-                type: string
-              endTime:
-                description: "End time for the scan, in ISO format"
-                type: string
               customers:
                 description: List of customers to scan
                 items:
                   type: string
                 type: array
-              volumeSize:
-                description: "[Optional] Size of the volume to attach to the scanning\
-                  \ jobs, defaults to '300g'"
-                nullable: true
-                type: string
-              targetObject:
-                description: "[Optional] What to scan either blocks or indices, defaults\
-                  \ to 'indices'"
-                nullable: true
+              endTime:
+                description: "End time for the scan, in ISO format"
                 type: string
               maxParallelScans:
-                description: "Max number of scans that can be performed at the same\
-                  \ time, defaults to 1"
+                default: 1
+                description: Max number of scans that can be performed at the same
+                  time
                 minimum: 1.0
                 type: integer
+              retriesPerSegment:
+                default: 3
+                description: How many times to attempt each segment
+                maximum: 5.0
+                minimum: 1.0
+                type: integer
+              startTime:
+                description: "Start time for the scan, in ISO format"
+                type: string
+              targetObject:
+                default: indices
+                description: What to scan either blocks or indices
+                type: string
               timeRangeSegmentLength:
                 description: "Length of how long each scan should be, for example\
                   \ to break the full time range into 5m segments set this to PT5m"
                 nullable: true
                 type: string
-              retriesPerSegment:
-                description: "How many times to attempt each segment, default is 3"
-                maximum: 5.0
-                minimum: 1.0
-                type: integer
+              volumeSize:
+                description: Size of the volume to attach to the scanning jobs
+                type: string
             required:
             - startTime
             - endTime
@@ -103,52 +102,52 @@ spec:
             type: object
           status:
             properties:
-              successful:
-                type: boolean
-              failed:
-                type: boolean
+              completedSegmentCount:
+                type: integer
+              completionTime:
+                type: string
               error:
                 type: string
-              segments:
-                description: Pairs of time range and customer that will be scanned
-                  independently
-                items:
-                  properties:
-                    id:
-                      type: string
-                    customer:
-                      type: string
-                    startTime:
-                      type: string
-                    endTime:
-                      type: string
-                    status:
-                      enum:
-                      - PENDING
-                      - PROCESSING
-                      - COMPLETED
-                      - FAILED
-                      type: string
-                  type: object
-                type: array
-              segmentCount:
+              failed:
+                type: boolean
+              failedSegmentCount:
+                type: integer
+              lastUpdateTime:
+                type: string
+              observedGeneration:
                 type: integer
               pendingSegmentCount:
                 type: integer
               processingSegmentCount:
                 type: integer
-              completedSegmentCount:
-                type: integer
-              failedSegmentCount:
-                type: integer
               scanStartedTime:
                 type: string
-              lastUpdateTime:
-                type: string
-              completionTime:
-                type: string
-              observedGeneration:
+              segmentCount:
                 type: integer
+              segments:
+                description: Pairs of time range and customer that will be scanned
+                  independently
+                items:
+                  properties:
+                    customer:
+                      type: string
+                    endTime:
+                      type: string
+                    id:
+                      type: string
+                    startTime:
+                      type: string
+                    status:
+                      enum:
+                      - COMPLETED
+                      - FAILED
+                      - PENDING
+                      - PROCESSING
+                      type: string
+                  type: object
+                type: array
+              successful:
+                type: boolean
             type: object
         type: object
     served: true

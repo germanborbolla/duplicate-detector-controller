@@ -2,11 +2,9 @@ package com.sumologic.duplicate.detector.controller.customresource;
 
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
 import com.google.common.base.MoreObjects;
+import com.sumologic.duplicate.detector.controller.Constants;
 import io.fabric8.crd.generator.annotation.PrinterColumn;
-import io.fabric8.generator.annotation.Max;
-import io.fabric8.generator.annotation.Min;
-import io.fabric8.generator.annotation.Nullable;
-import io.fabric8.generator.annotation.Required;
+import io.fabric8.generator.annotation.*;
 import org.apache.commons.lang3.tuple.Pair;
 
 import java.time.Duration;
@@ -31,25 +29,26 @@ public class DuplicateMessageScanSpec {
   @Required
   public List<String> customers;
 
-  @JsonPropertyDescription("[Optional] Size of the volume to attach to the scanning jobs, defaults to '300g'")
-  @Nullable
+  @JsonPropertyDescription("Size of the volume to attach to the scanning jobs")
   public String volumeSize;
 
-  @JsonPropertyDescription("[Optional] What to scan either blocks or indices, defaults to 'indices'")
-  @Nullable
-  public String targetObject;
+  @JsonPropertyDescription("What to scan either blocks or indices")
+  @Default(Constants.DEFAULT_TARGET_OBJECT)
+  public String targetObject = Constants.DEFAULT_TARGET_OBJECT;
 
-  @JsonPropertyDescription("Max number of scans that can be performed at the same time, defaults to 1")
+  @JsonPropertyDescription("Max number of scans that can be performed at the same time")
   @Min(1)
+  @Default("1")
   public int maxParallelScans = 1;
 
   @JsonPropertyDescription("Length of how long each scan should be, for example to break the full time range into 5m segments set this to PT5m")
   @Nullable
   public String timeRangeSegmentLength;
 
-  @JsonPropertyDescription("How many times to attempt each segment, default is 3")
+  @JsonPropertyDescription("How many times to attempt each segment")
   @Min(1)
   @Max(5)
+  @Default("3")
   public int retriesPerSegment = 3;
 
   public DuplicateMessageScanSpec() {

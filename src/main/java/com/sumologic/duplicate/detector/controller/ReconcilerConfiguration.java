@@ -61,8 +61,8 @@ public class ReconcilerConfiguration {
     private final String defaultSize;
 
     public PersistentVolumeConfiguration() {
-      this(Optional.ofNullable(System.getenv("PVC_STORAGE_CLASS_NAME")).orElse("gp2"),
-        Optional.ofNullable(System.getenv("PVC_DEFAULT_SIZE")).orElse("300Gi"));
+      this(Optional.ofNullable(System.getenv("PVC_STORAGE_CLASS_NAME")).orElse(Constants.DEFAULT_VOLUME_STORAGE_CLASS),
+        Optional.ofNullable(System.getenv("PVC_DEFAULT_SIZE")).orElse(Constants.DEFAULT_VOLUME_SIZE));
     }
 
     public PersistentVolumeConfiguration(String defaultStorageClassName, String defaultSize) {
