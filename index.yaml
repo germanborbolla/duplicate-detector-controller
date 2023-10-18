@@ -71,8 +71,4 @@ entries:
     urls:
     - packages/duplicate-detector-controller-1.0.1.tgz
     version: 1.0.1
-<<<<<<< HEAD
 generated: "2023-10-18T11:50:41.612849-07:00"
-=======
-generated: "2023-10-18T10:53:40.932589-07:00"
->>>>>>> germanborbolla/main
