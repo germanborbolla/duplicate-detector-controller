@@ -5,5 +5,5 @@ metadata:
   labels:
     {{- include "duplicate-detector-controlller.labels" . | nindent 4 }}
 data:
-  log42.xml: |
+  log4j2.xml: |
     {{- .Values.log4j2 | nindent 4 }}
