@@ -61,7 +61,7 @@ public class PersistentVolumeClaimDependentResource extends AbstractBulkDependen
           .build())
         .build()
     ));
-    logger.debug("For scan {} returning jobs {}", scan.getMetadata().getName(),
+    logger.debug("For scan {} returning pvcs {}", scan.getNamespacedName(),
       pvcs.entrySet().stream().map(e -> String.format("%s->%s", e.getKey(), e.getValue().getMetadata().getName()))
         .collect(Collectors.joining(", ")));
     return pvcs;

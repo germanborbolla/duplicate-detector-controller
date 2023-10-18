@@ -53,7 +53,7 @@ public class JobDependentResource extends AbstractBulkDependentResource<Job> {
     }
     Map<String, Job> jobs = nextSegments.collect(Collectors.toMap(s -> s.id, s -> createJobForSegment(scan, s,
       scan.getSpec().getSegments().size() == 1)));
-    logger.debug("For scan {} returning jobs {}", scan.getMetadata().getName(),
+    logger.debug("For scan {} returning jobs {}", scan.getNamespacedName(),
       jobs.entrySet().stream().map(e -> String.format("%s->%s", e.getKey(), e.getValue().getMetadata().getName()))
         .collect(Collectors.joining(", ")));
     return jobs;

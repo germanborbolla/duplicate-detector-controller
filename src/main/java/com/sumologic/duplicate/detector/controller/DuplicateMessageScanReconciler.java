@@ -58,7 +58,7 @@ public class DuplicateMessageScanReconciler implements Reconciler<DuplicateMessa
     DuplicateMessageScanStatus updatedStatus = calculateStatus(scan, context);
     workflow.reconcile(scan, context);
     UpdateControl<DuplicateMessageScan> control = UpdateControl.patchStatus(scan.withStatus(updatedStatus));
-    logger.debug("Reconciled scan {} with control {}", scan, control);
+    logger.debug("Reconciled scan {} with control {}", scan.getNamespacedName(), control);
     return control;
   }
 

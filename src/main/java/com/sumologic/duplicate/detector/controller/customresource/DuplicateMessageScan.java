@@ -41,4 +41,9 @@ public class DuplicateMessageScan
       .addToLabels("app.kubernetes.io/part-of", getMetadata().getName()).
       build();
   }
+
+  @JsonIgnore
+  public String getNamespacedName() {
+    return String.format("%s/%s", getMetadata().getNamespace(), getMetadata().getNamespace());
+  }
 }
