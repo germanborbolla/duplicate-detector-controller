@@ -84,20 +84,27 @@ public class DuplicateMessageScanReconciler implements Reconciler<DuplicateMessa
     context.getSecondaryResources(Job.class).forEach(job -> Optional.ofNullable(job.getMetadata().getLabels())
       .flatMap(labels -> Optional.ofNullable(labels.get(Constants.SEGMENT_LABEL_KEY))
         .map(Integer::parseInt)).ifPresent(index -> {
-          Segment segment = status.segments.get(index);
+        Segment segment = status.segments.get(index);
+        String jobStatus = "in process";
         if (job.getStatus() != null && job.getStatus().getSucceeded() != null
           && job.getStatus().getSucceeded() == 1) {
-            segment.completed();
-          } else if (job.getStatus() != null && job.getStatus().getFailed() != null
+          jobStatus = "successful";
+          segment.completed();
+        } else if (job.getStatus() != null && job.getStatus().getFailed() != null
           && job.getStatus().getFailed() == 1) {
-            segment.failed();
-          } else {
-            segment.processing();
-          }
+          jobStatus = "failed";
+          segment.failed();
+        } else {
+          segment.processing();
+        }
+        logger.debug("For scan {} and segment {} found {} job {}", scan.getMetadata().getName(), segment,
+          jobStatus, job.getMetadata().getName());
       })
     );
     if (status.segments.stream().allMatch(Segment::isFinished)) {
       status.completionTime = currentDate();
+      logger.debug("For scan {} all segments have completed, {} failed", scan.getMetadata().getName(),
+        status.segments.stream().filter(s -> s.status == Segment.SegmentStatus.FAILED).count());
       if (status.segments.stream().anyMatch(s -> s.status == Segment.SegmentStatus.FAILED)) {
         status.failed("One or more jobs failed");
       } else {

@@ -9,8 +9,6 @@ import java.time.Duration;
 
 public class Controller {
     public static void main(String[] args) {
-        Configurator.initialize("config", null, "classpath:log4j2.xml");
-
         ReconcilerConfiguration reconcilerConfiguration = new ReconcilerConfiguration();
 
         KubernetesClient client = new KubernetesClientBuilder().build();

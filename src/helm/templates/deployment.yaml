@@ -32,8 +32,14 @@ spec:
               value: "false"
             - name: KILL_TAILING_SIDECARS
               value: "{{ .Values.killTailingSidecars }}"
+            - name: JAVA_OPTS
+              value: "-Xms256m -Xmx1g -Dlog4j2.configurationFile=/etc/duplicate-detector-controller/log4j2.xml"
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - mountPath: /etc/duplicate-detector-controller
+              name: config
+              readOnly: true
       tolerations:
         - effect: NoSchedule
           key: cpuBrand
@@ -52,3 +58,8 @@ spec:
                 operator: In
                 values:
                 - arm64
+      volumes:
+        - configMap:
+            name: {{ .Chart.Name }}
+          name: config
+
