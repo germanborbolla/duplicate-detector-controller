@@ -11,8 +11,6 @@ import io.fabric8.kubernetes.api.model.Quantity;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.javaoperatorsdk.operator.api.reconciler.Context;
 import io.javaoperatorsdk.operator.processing.dependent.kubernetes.KubernetesDependentResourceConfig;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 import java.util.Optional;
@@ -29,7 +27,6 @@ public class PersistentVolumeClaimDependentResource extends AbstractBulkDependen
       .setLabelSelector(Constants.RESOURCE_LABEL_SELECTOR));
     return resource;
   }
-  private final Logger logger = LoggerFactory.getLogger(getClass());
   private final ReconcilerConfiguration.PersistentVolumeConfiguration configuration;
 
   public PersistentVolumeClaimDependentResource(ReconcilerConfiguration.PersistentVolumeConfiguration configuration) {
@@ -53,17 +50,13 @@ public class PersistentVolumeClaimDependentResource extends AbstractBulkDependen
     } else {
       segments = scan.getSpec().getSegments().stream();
     }
-    Map<String, PersistentVolumeClaim> pvcs = segments.collect(Collectors.toMap(
+    return logOutput(scan.getNamespacedName(), segments.collect(Collectors.toMap(
       s -> s.id,
       s -> pvcBuilder.withMetadata(new ObjectMetaBuilder(scan.buildDependentObjectMetadata())
           .withName(String.format("%s-%s", scan.getMetadata().getName(), s.id))
           .addToLabels(Constants.SEGMENT_LABEL_KEY, s.id)
           .build())
         .build()
-    ));
-    logger.debug("For scan {} returning pvcs {}", scan.getNamespacedName(),
-      pvcs.entrySet().stream().map(e -> String.format("%s->%s", e.getKey(), e.getValue().getMetadata().getName()))
-        .collect(Collectors.joining(", ")));
-    return pvcs;
+    )));
   }
 }

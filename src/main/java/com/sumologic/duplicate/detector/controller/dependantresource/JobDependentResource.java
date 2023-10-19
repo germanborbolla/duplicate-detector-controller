@@ -14,8 +14,6 @@ import io.fabric8.kubernetes.api.model.batch.v1.JobBuilder;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.javaoperatorsdk.operator.api.reconciler.Context;
 import io.javaoperatorsdk.operator.processing.dependent.kubernetes.KubernetesDependentResourceConfig;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -33,7 +31,6 @@ public class JobDependentResource extends AbstractBulkDependentResource<Job> {
     return resource;
   }
 
-  private final Logger logger = LoggerFactory.getLogger(getClass());
   private final ReconcilerConfiguration.JobConfiguration configuration;
 
   public JobDependentResource(ReconcilerConfiguration.JobConfiguration configuration) {
@@ -51,12 +48,8 @@ public class JobDependentResource extends AbstractBulkDependentResource<Job> {
     } else {
       nextSegments = status.segments.stream().filter(Segment::isPendingOrProcessing).limit(parallelism);
     }
-    Map<String, Job> jobs = nextSegments.collect(Collectors.toMap(s -> s.id, s -> createJobForSegment(scan, s,
-      scan.getSpec().getSegments().size() == 1)));
-    logger.debug("For scan {} returning jobs {}", scan.getNamespacedName(),
-      jobs.entrySet().stream().map(e -> String.format("%s->%s", e.getKey(), e.getValue().getMetadata().getName()))
-        .collect(Collectors.joining(", ")));
-    return jobs;
+    return logOutput(scan.getNamespacedName(), nextSegments.collect(Collectors.toMap(s -> s.id,
+      s -> createJobForSegment(scan, s, scan.getSpec().getSegments().size() == 1))));
   }
 
   private Job createJobForSegment(DuplicateMessageScan scan, Segment segment, boolean usePVC) {
